@@ -837,34 +837,46 @@ function triggerSpecialEffect(tile) {
 }
 
 function applyGravity(specialCreated = null) {
-    // Process each column
+    // Simple gravity: for each column, move all non-matched tiles down
     for (let c = 0; c < COLS; c++) {
-        // Collect surviving tiles and active wall positions
-        let survivingTiles = [];
-        let activeWallRows = [];
+        // First pass: collect all tiles we want to keep (in order from top to bottom)
+        let keepTiles = [];
+        let wallsWithPositions = []; // {tile, row}
 
         for (let r = 0; r < ROWS; r++) {
             let tile = grid[c][r];
-            // Only count walls that are NOT matched (still alive)
             if (tile.obstacle === OBS_WALL && !tile.isMatched) {
-                activeWallRows.push(r);
+                // Live wall - remember its position
+                wallsWithPositions.push({ tile: tile, row: r });
             } else if (!tile.isMatched) {
-                // Surviving non-wall tile
-                survivingTiles.push(tile);
+                // Normal surviving tile
+                keepTiles.push(tile);
             }
-            // Matched tiles (including destroyed walls) are ignored
+            // Matched tiles are dropped
         }
 
-        // Rebuild column from bottom to top
-        let tileIdx = survivingTiles.length - 1;
+        // Second pass: rebuild column
+        // Clear column first
+        for (let r = 0; r < ROWS; r++) {
+            grid[c][r] = null;
+        }
+
+        // Place walls back at their original positions
+        for (let w of wallsWithPositions) {
+            grid[c][w.row] = w.tile;
+        }
+
+        // Now fill remaining spots from bottom up with keepTiles, skipping wall positions
+        let tileIdx = keepTiles.length - 1;
         for (let r = ROWS - 1; r >= 0; r--) {
-            if (activeWallRows.includes(r)) {
-                // Active wall stays in place - get the actual wall tile
-                // (it should already be there, but ensure grid reference is correct)
+            if (grid[c][r] !== null) {
+                // Wall is here, skip
                 continue;
-            } else if (tileIdx >= 0) {
-                // Place surviving tile
-                let tile = survivingTiles[tileIdx];
+            }
+
+            if (tileIdx >= 0) {
+                // Place existing tile
+                let tile = keepTiles[tileIdx];
                 grid[c][r] = tile;
                 tile.c = c;
                 tile.r = r;
@@ -872,17 +884,17 @@ function applyGravity(specialCreated = null) {
                 tile.targetY = r * TILE_SIZE;
                 tileIdx--;
             } else {
-                // Create new tile for empty spot
+                // Need new tile
                 grid[c][r] = createNewTile(c, r);
             }
         }
     }
 
-    // Fill any nulls
+    // Safety: fill any remaining nulls
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
             if (!grid[c][r]) {
-                grid[c][r] = createTile(c, r);
+                grid[c][r] = createNewTile(c, r);
             }
         }
     }
