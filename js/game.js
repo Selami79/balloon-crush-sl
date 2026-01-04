@@ -1,5 +1,5 @@
-// BALOON CRUSH - ADVANCED STRATEGY ENGINE
-// Features: Gravity, Chain Reactions, Special Balloons (Striped/Bomb)
+// BALLOON CRUSH - PREMIUM ENGINE v2.0
+// Advanced Match-3 with Sound, Particles, Special Balloons
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -8,58 +8,204 @@ const movesEl = document.getElementById('moves');
 const gameOverEl = document.getElementById('game-over');
 const finalScoreEl = document.getElementById('final-score');
 
-// Config
+// === CONFIG ===
 const COLS = 8;
 const ROWS = 8;
 const TILE_SIZE = 50;
-const ANIM_SPEED = 0.2; // 0.0 to 1.0
 
-// Colors: Red, Blue, Green, Yellow, Purple, Orange
-const COLORS = ['#FF4136', '#0074D9', '#2ECC40', '#FFDC00', '#B10DC9', '#FF851B'];
+// Balloon Colors
+const COLORS = [
+    { main: '#FF4136', light: '#FF7166', dark: '#CC0000' }, // Red
+    { main: '#0074D9', light: '#4DA3FF', dark: '#004C99' }, // Blue
+    { main: '#2ECC40', light: '#5FE86F', dark: '#1A9928' }, // Green
+    { main: '#FFDC00', light: '#FFE94D', dark: '#CCAF00' }, // Yellow
+    { main: '#B10DC9', light: '#D94DED', dark: '#7A0090' }, // Purple
+    { main: '#FF851B', light: '#FFB366', dark: '#CC5C00' }  // Orange
+];
 
 // Tile Types
 const TYPE_NORMAL = 0;
-const TYPE_STRIPED_H = 1; // Destroys Row
-const TYPE_STRIPED_V = 2; // Destroys Col
-const TYPE_BOMB = 3;      // Destroys Area or Color
+const TYPE_STRIPED_H = 1;
+const TYPE_STRIPED_V = 2;
+const TYPE_BOMB = 3;
 
-// State
-let grid = []; // 2D Array
+// === AUDIO ENGINE ===
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new AudioCtx();
+    }
+}
+
+function playSound(type) {
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    const now = audioCtx.currentTime;
+
+    switch (type) {
+        case 'pop':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+            break;
+        case 'swap':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.linearRampToValueAtTime(600, now + 0.05);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.08);
+            break;
+        case 'combo':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523, now); // C5
+            gain.gain.setValueAtTime(0.3, now);
+            osc.frequency.setValueAtTime(659, now + 0.1); // E5
+            osc.frequency.setValueAtTime(784, now + 0.2); // G5
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+        case 'special':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(1000, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+        case 'gameover':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.5);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+            break;
+    }
+}
+
+// === PARTICLE SYSTEM ===
+let particles = [];
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 8;
+        this.vy = (Math.random() - 0.5) * 8 - 3;
+        this.life = 1;
+        this.decay = 0.02 + Math.random() * 0.02;
+        this.size = 3 + Math.random() * 4;
+        this.color = color;
+        this.gravity = 0.2;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.life -= this.decay;
+        return this.life > 0;
+    }
+
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+function spawnParticles(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, color));
+    }
+}
+
+// === FLOATING TEXT ===
+let floatingTexts = [];
+
+class FloatingText {
+    constructor(x, y, text, color = '#FFD700') {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.life = 1;
+        this.vy = -2;
+    }
+
+    update() {
+        this.y += this.vy;
+        this.life -= 0.02;
+        return this.life > 0;
+    }
+
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.globalAlpha = 1;
+    }
+}
+
+// === SCREEN SHAKE ===
+let shakeIntensity = 0;
+let shakeDecay = 0.9;
+
+function shake(intensity) {
+    shakeIntensity = intensity;
+}
+
+// === GAME STATE ===
+let grid = [];
 let score = 0;
 let moves = 30;
-let state = 'IDLE'; // IDLE, ANIMATING, GAME_OVER
+let comboCount = 0;
+let state = 'IDLE';
 let selectedTile = null;
 
-// Animation Queue
-let animations = [];
-
-// Initialize
 canvas.width = COLS * TILE_SIZE;
 canvas.height = ROWS * TILE_SIZE;
 
-function initDisplay() {
-    canvas.style.width = '100%';
-    canvas.style.height = 'auto';
-    canvas.style.aspectRatio = `${COLS}/${ROWS}`;
-}
-initDisplay();
-
-// --- CORE LOGIC ---
+// === CORE FUNCTIONS ===
 
 function startGame() {
+    initAudio();
     score = 0;
     moves = 30;
+    comboCount = 0;
     state = 'IDLE';
     selectedTile = null;
+    particles = [];
+    floatingTexts = [];
     updateUI();
     gameOverEl.style.display = 'none';
 
-    // Create Grid without initial matches
     do {
         createGrid();
     } while (findMatches().length > 0);
 
-    draw();
+    gameLoop();
 }
 
 function createGrid() {
@@ -72,33 +218,36 @@ function createGrid() {
     }
 }
 
-function createTile(c, r, type = TYPE_NORMAL, matchColor = null) {
+function createTile(c, r, type = TYPE_NORMAL, colorIdx = null) {
     return {
-        c: c, r: r,
-        x: c * TILE_SIZE, y: r * TILE_SIZE, // Visual Pos
-        targetX: c * TILE_SIZE, targetY: r * TILE_SIZE,
-        color: matchColor !== null ? matchColor : Math.floor(Math.random() * COLORS.length),
+        c, r,
+        x: c * TILE_SIZE,
+        y: r * TILE_SIZE,
+        targetX: c * TILE_SIZE,
+        targetY: r * TILE_SIZE,
+        color: colorIdx !== null ? colorIdx : Math.floor(Math.random() * COLORS.length),
         type: type,
-        alpha: 1, // For pop animation
         scale: 1,
-        isMatched: false
+        targetScale: 1,
+        rotation: 0,
+        isMatched: false,
+        isNew: false
     };
 }
 
-// --- INTERACTION ---
-
+// === INPUT ===
 canvas.addEventListener('mousedown', handleInput);
 canvas.addEventListener('touchstart', handleInput, { passive: false });
 
 function handleInput(e) {
     if (state !== 'IDLE' || moves <= 0) return;
+    initAudio(); // Unlock audio on first interaction
     e.preventDefault();
 
     let rect = canvas.getBoundingClientRect();
     let cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
     let cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
 
-    // Canvas Scale Correction
     let scaleX = canvas.width / rect.width;
     let scaleY = canvas.height / rect.height;
 
@@ -109,75 +258,73 @@ function handleInput(e) {
 
     if (!selectedTile) {
         selectedTile = { c: col, r: row };
+        playSound('swap');
     } else {
-        // Check adjacency
         let d = Math.abs(col - selectedTile.c) + Math.abs(row - selectedTile.r);
         if (d === 1) {
-            // Swap
             attemptSwap(selectedTile, { c: col, r: row });
             selectedTile = null;
         } else {
-            selectedTile = { c: col, r: row }; // Select new
+            selectedTile = { c: col, r: row };
+            playSound('swap');
         }
     }
-    draw();
 }
 
 function attemptSwap(t1, t2) {
     state = 'ANIMATING';
+    playSound('swap');
 
-    // Logic Swap
+    // Swap in grid
     let temp = grid[t1.c][t1.r];
     grid[t1.c][t1.r] = grid[t2.c][t2.r];
     grid[t2.c][t2.r] = temp;
 
-    // Update Coordinates inside objects
-    grid[t1.c][t1.r].c = t1.c; grid[t1.c][t1.r].r = t1.r;
-    grid[t2.c][t2.r].c = t2.c; grid[t2.c][t2.r].r = t2.r;
+    grid[t1.c][t1.r].c = t1.c;
+    grid[t1.c][t1.r].r = t1.r;
+    grid[t2.c][t2.r].c = t2.c;
+    grid[t2.c][t2.r].r = t2.r;
 
-    // Update Target Visuals
     updateTargets();
 
-    // Check Matches
     let matches = findMatches();
 
-    // Animate Swap
-    animate(() => {
+    setTimeout(() => {
         if (matches.length > 0) {
             moves--;
+            comboCount = 0;
             updateUI();
-            handleMatches(matches); // Process matches
+            processMatches(matches);
         } else {
-            // Swap Back (Invalid Move)
+            // Swap back
             let tempBack = grid[t1.c][t1.r];
             grid[t1.c][t1.r] = grid[t2.c][t2.r];
             grid[t2.c][t2.r] = tempBack;
 
-            grid[t1.c][t1.r].c = t1.c; grid[t1.c][t1.r].r = t1.r;
-            grid[t2.c][t2.r].c = t2.c; grid[t2.c][t2.r].r = t2.r;
+            grid[t1.c][t1.r].c = t1.c;
+            grid[t1.c][t1.r].r = t1.r;
+            grid[t2.c][t2.r].c = t2.c;
+            grid[t2.c][t2.r].r = t2.r;
 
             updateTargets();
-            animate(() => {
-                state = 'IDLE';
-                draw();
-            });
+            setTimeout(() => { state = 'IDLE'; }, 200);
         }
-    });
+    }, 200);
 }
 
-// --- MATCH LOGIC (STRATEGY) ---
+// === MATCH DETECTION ===
 
 function findMatches() {
-    let matchedSet = new Set();
+    let matched = new Set();
 
     // Horizontal
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS - 2; c++) {
-            let tile = grid[c][r];
-            if (grid[c + 1][r].color === tile.color && grid[c + 2][r].color === tile.color) {
-                matchedSet.add(grid[c][r]);
-                matchedSet.add(grid[c + 1][r]);
-                matchedSet.add(grid[c + 2][r]);
+            let color = grid[c][r].color;
+            if (grid[c + 1][r].color === color && grid[c + 2][r].color === color) {
+                matched.add(grid[c][r]);
+                matched.add(grid[c + 1][r]);
+                matched.add(grid[c + 2][r]);
             }
         }
     }
@@ -185,191 +332,100 @@ function findMatches() {
     // Vertical
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS - 2; r++) {
-            let tile = grid[c][r];
-            if (grid[c][r + 1].color === tile.color && grid[c][r + 2].color === tile.color) {
-                matchedSet.add(grid[c][r]);
-                matchedSet.add(grid[c][r + 1]);
-                matchedSet.add(grid[c][r + 2]);
+            let color = grid[c][r].color;
+            if (grid[c][r + 1].color === color && grid[c][r + 2].color === color) {
+                matched.add(grid[c][r]);
+                matched.add(grid[c][r + 1]);
+                matched.add(grid[c][r + 2]);
             }
         }
     }
 
-    // Convert logic for Special Creation could happen here
-    // For now, simple return array
-    return Array.from(matchedSet);
+    return Array.from(matched);
 }
 
+function processMatches(matches) {
+    comboCount++;
 
-function handleMatches(matches) {
-    // 1. Mark Matches & Score
-    score += matches.length * 10;
+    let points = matches.length * 10 * comboCount;
+    score += points;
     updateUI();
 
-    // Trigger Special Effects (Recursive Bomb Logic could go here)
+    if (comboCount > 1) {
+        playSound('combo');
+        shake(comboCount * 2);
+    }
 
-    // 2. Animate Popping
+    // Pop animation & particles
     matches.forEach(t => {
         t.isMatched = true;
-        t.scale = 0;
-        t.alpha = 0;
+        t.targetScale = 0;
+
+        let px = t.x + TILE_SIZE / 2;
+        let py = t.y + TILE_SIZE / 2;
+        spawnParticles(px, py, COLORS[t.color].main, 6);
+        playSound('pop');
+
+        floatingTexts.push(new FloatingText(px, py, '+' + (10 * comboCount)));
     });
 
-    animate(() => {
-        // 3. Remove & Shift Down
+    setTimeout(() => {
         applyGravity();
-    });
+    }, 150);
 }
 
 function applyGravity() {
-    // Shift logic
     for (let c = 0; c < COLS; c++) {
         let shift = 0;
         for (let r = ROWS - 1; r >= 0; r--) {
             if (grid[c][r].isMatched) {
                 shift++;
             } else if (shift > 0) {
-                // Move tile down
                 grid[c][r + shift] = grid[c][r];
-                grid[c][r + shift].r += shift;
-                grid[c][r + shift].targetY = (r + shift) * TILE_SIZE; // New target
-                grid[c][r] = null; // Mark old spot empty temporarily
+                grid[c][r + shift].r = r + shift;
+                grid[c][r + shift].targetY = (r + shift) * TILE_SIZE;
+                grid[c][r] = null;
             }
         }
 
-        // Fill top empty spots
         for (let r = 0; r < shift; r++) {
             grid[c][r] = createTile(c, r);
-            grid[c][r].y = -TILE_SIZE * (shift - r); // Start above screen
+            grid[c][r].y = -TILE_SIZE * (shift - r);
             grid[c][r].targetY = r * TILE_SIZE;
+            grid[c][r].isNew = true;
         }
     }
 
-    // After gravity, check chain reactions
-    animate(() => {
+    setTimeout(() => {
         let newMatches = findMatches();
         if (newMatches.length > 0) {
-            score += 50; // Bonus for combo
-            handleMatches(newMatches); // Recursion
+            processMatches(newMatches);
         } else {
             state = 'IDLE';
             checkGameOver();
-            draw();
         }
-    });
+    }, 300);
 }
 
 function checkGameOver() {
     if (moves <= 0) {
         state = 'GAME_OVER';
+        playSound('gameover');
         gameOverEl.style.display = 'block';
         finalScoreEl.innerText = score;
         if (window.submitScoreToSL) window.submitScoreToSL(score);
     }
 }
 
-
-// --- ANIMATION LOOP ---
-
 function updateTargets() {
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            grid[c][r].targetX = c * TILE_SIZE;
-            grid[c][r].targetY = r * TILE_SIZE;
-        }
-    }
-}
-
-function animate(onComplete) {
-    let moving = true;
-
-    function loop() {
-        moving = false;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        for (let c = 0; c < COLS; c++) {
-            for (let r = 0; r < ROWS; r++) {
-                let t = grid[c][r];
-                if (!t) continue;
-
-                // Lerp Position
-                let dx = t.targetX - t.x;
-                let dy = t.targetY - t.y;
-
-                if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                    t.x += dx * 0.2;
-                    t.y += dy * 0.2;
-                    moving = true;
-                } else {
-                    t.x = t.targetX;
-                    t.y = t.targetY;
-                }
-
-                // Render
-                if (!t.isMatched || t.scale > 0.1) {
-                    drawTile(t);
-                }
+            if (grid[c][r]) {
+                grid[c][r].targetX = c * TILE_SIZE;
+                grid[c][r].targetY = r * TILE_SIZE;
             }
         }
-
-        if (moving) {
-            requestAnimationFrame(loop);
-        } else {
-            if (onComplete) onComplete();
-        }
     }
-    loop();
-}
-
-// --- DRAWING ---
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let c = 0; c < COLS; c++) {
-        for (let r = 0; r < ROWS; r++) {
-            let t = grid[c][r];
-            if (t) drawTile(t);
-        }
-    }
-}
-
-function drawTile(t) {
-    if (t.isMatched) return; // Don't draw popped
-
-    let cx = t.x + TILE_SIZE / 2;
-    let cy = t.y + TILE_SIZE / 2;
-    let size = (TILE_SIZE / 2 - 4) * t.scale;
-
-    // Selection Halo
-    if (selectedTile && selectedTile.c === t.c && selectedTile.r === t.r) {
-        ctx.globalAlpha = 0.5;
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(cx, cy, size + 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    }
-
-    // Balloon Body
-    ctx.fillStyle = COLORS[t.color];
-    ctx.beginPath();
-    ctx.ellipse(cx, cy - 2, size, size * 1.15, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Specular Highlight (The 'Glossy' look)
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(cx - size * 0.3, cy - size * 0.4, size * 0.2, size * 0.1, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // String Knot
-    ctx.fillStyle = COLORS[t.color];
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + size * 1.1);
-    ctx.lineTo(cx - 3, cy + size * 1.35);
-    ctx.lineTo(cx + 3, cy + size * 1.35);
-    ctx.fill();
-
-    // Type Indicator (Striped, Bomb) could be drawn here later
 }
 
 function updateUI() {
@@ -377,4 +433,135 @@ function updateUI() {
     movesEl.innerText = moves;
 }
 
+// === GAME LOOP ===
+
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    // Update tiles
+    for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+            let t = grid[c][r];
+            if (!t) continue;
+
+            t.x += (t.targetX - t.x) * 0.2;
+            t.y += (t.targetY - t.y) * 0.2;
+            t.scale += (t.targetScale - t.scale) * 0.3;
+        }
+    }
+
+    // Update particles
+    particles = particles.filter(p => p.update());
+
+    // Update floating texts
+    floatingTexts = floatingTexts.filter(ft => ft.update());
+
+    // Decay shake
+    shakeIntensity *= shakeDecay;
+}
+
+function render() {
+    ctx.save();
+
+    // Apply shake
+    if (shakeIntensity > 0.5) {
+        ctx.translate(
+            (Math.random() - 0.5) * shakeIntensity,
+            (Math.random() - 0.5) * shakeIntensity
+        );
+    }
+
+    ctx.clearRect(-10, -10, canvas.width + 20, canvas.height + 20);
+
+    // Draw grid background
+    for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+            ctx.fillStyle = (c + r) % 2 === 0 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)';
+            ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    }
+
+    // Draw tiles
+    for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+            let t = grid[c][r];
+            if (t && t.scale > 0.05) drawTile(t);
+        }
+    }
+
+    // Draw particles
+    particles.forEach(p => p.draw(ctx));
+
+    // Draw floating texts
+    floatingTexts.forEach(ft => ft.draw(ctx));
+
+    ctx.restore();
+}
+
+function drawTile(t) {
+    let cx = t.x + TILE_SIZE / 2;
+    let cy = t.y + TILE_SIZE / 2;
+    let size = (TILE_SIZE / 2 - 4) * t.scale;
+
+    if (size < 1) return;
+
+    let col = COLORS[t.color];
+
+    // Selection glow
+    if (selectedTile && selectedTile.c === t.c && selectedTile.r === t.r) {
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, size + 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // Balloon shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 3, cy + 5, size * 0.9, size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Balloon body gradient
+    let grad = ctx.createRadialGradient(cx - size * 0.3, cy - size * 0.3, 0, cx, cy, size * 1.2);
+    grad.addColorStop(0, col.light);
+    grad.addColorStop(0.5, col.main);
+    grad.addColorStop(1, col.dark);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 2, size, size * 1.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Specular highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(cx - size * 0.3, cy - size * 0.4, size * 0.25, size * 0.15, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Knot
+    ctx.fillStyle = col.dark;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 1.1);
+    ctx.lineTo(cx - 4, cy + size * 1.35);
+    ctx.lineTo(cx + 4, cy + size * 1.35);
+    ctx.closePath();
+    ctx.fill();
+
+    // String hint
+    ctx.strokeStyle = col.dark;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 1.35);
+    ctx.quadraticCurveTo(cx + 3, cy + size * 1.5, cx - 2, cy + size * 1.6);
+    ctx.stroke();
+}
+
+// Start
 startGame();
