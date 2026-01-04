@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Balloon Crush</title>
+    <!-- Google Font with fallback -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
     <style>
         * {
@@ -147,6 +148,7 @@
             font-size: 32px;
             background: linear-gradient(45deg, #f093fb, #f5576c);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -295,7 +297,9 @@
     <!-- Level Failed Popup -->
     <div class="overlay" id="level-failed">
         <div class="popup">
-            <h1 style="background: linear-gradient(45deg, #ff416c, #ff4b2b); -webkit-background-clip: text;">LEVEL
+            <h1
+                style="background: linear-gradient(45deg, #ff416c, #ff4b2b); -webkit-background-clip: text; background-clip: text;">
+                LEVEL
                 FAILED</h1>
             <h2>Score: <span id="failed-score">0</span></h2>
             <p style="color:#666">You needed <span id="needed-score">0</span> more points</p>

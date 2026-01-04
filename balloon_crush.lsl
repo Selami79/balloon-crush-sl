@@ -17,11 +17,30 @@ list playerLevels = [];
 FindPrims() {
     integer i;
     integer prims = llGetNumberOfPrims();
-    SCREEN_LINK = -2; RESET_PRIM_LINK = -1;
-    for(i=0; i<=prims; ++i) {
-        string n = llStringTrim(llToLower(llGetLinkName(i)), STRING_TRIM);
-        if(n == "ekran") SCREEN_LINK = i;
-        else if(n == "reset") RESET_PRIM_LINK = i;
+    SCREEN_LINK = -2; 
+    RESET_PRIM_LINK = -1;
+    
+    // For single-prim objects, the root prim is link 0 or LINK_THIS
+    if (prims == 1) {
+        // Single prim - check if it's named "ekran" or just use it as screen
+        string rootName = llStringTrim(llToLower(llGetLinkName(LINK_THIS)), STRING_TRIM);
+        if (rootName == "ekran" || rootName == "") {
+            SCREEN_LINK = LINK_THIS;
+        }
+        llOwnerSay("Tek prim modu. SCREEN_LINK = " + (string)SCREEN_LINK);
+    } else {
+        // Multi-prim object - search for named prims
+        for(i=0; i<=prims; ++i) {
+            string n = llStringTrim(llToLower(llGetLinkName(i)), STRING_TRIM);
+            if(n == "ekran") SCREEN_LINK = i;
+            else if(n == "reset") RESET_PRIM_LINK = i;
+        }
+    }
+    
+    // If still not found, try link 0 (root)
+    if (SCREEN_LINK == -2) {
+        llOwnerSay("UYARI: 'ekran' adlı prim bulunamadı! Root prim kullanılıyor.");
+        SCREEN_LINK = LINK_THIS;
     }
 }
 
@@ -128,17 +147,21 @@ default {
                 + "&v=" + (string)llGetUnixTime();
             
             llOwnerSay(user + " için Balloon Crush yükleniyor (Level " + (string)playerLevel + ")...");
+            llOwnerSay("URL: " + url);
             
-            llSetLinkMedia(SCREEN_LINK, SCREEN_FACE, [
+            // Try ALL_SIDES to ensure media shows on correct face
+            llSetLinkMedia(SCREEN_LINK, ALL_SIDES, [
                 PRIM_MEDIA_CURRENT_URL, url,
                 PRIM_MEDIA_HOME_URL, url,
                 PRIM_MEDIA_AUTO_PLAY, TRUE,
-                PRIM_MEDIA_FIRST_CLICK_INTERACT, TRUE,
+                PRIM_MEDIA_FIRST_CLICK_INTERACT, FALSE,
                 PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE,
                 PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_ANYONE,
                 PRIM_MEDIA_AUTO_SCALE, TRUE,
                 PRIM_MEDIA_AUTO_ZOOM, TRUE
             ]);
+            
+            llOwnerSay("Media ayarlandı.");
         }
     }
     
