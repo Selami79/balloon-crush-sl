@@ -3,63 +3,340 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Balloon Crush PRO</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Balloon Crush</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            background: #2c3e50;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Fredoka One', cursive;
+            box-sizing: border-box;
         }
 
-        #game-container {
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-            border-radius: 15px;
-            overflow: hidden;
-            border: 4px solid #34495e;
-        }
-
-        #ui-layer {
-            position: absolute;
-            top: 10px;
-            pointer-events: none;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #1a1a1a;
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        #header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 30px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 40px;
             color: white;
-            z-index: 100;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #header span {
+            color: #FFD700;
+        }
+
+        #game {
+            display: grid;
+            grid-template-columns: repeat(8, 50px);
+            grid-template-rows: repeat(8, 50px);
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell:hover {
+            transform: scale(1.1);
+        }
+
+        .cell.selected {
+            transform: scale(1.15);
+            box-shadow: 0 0 15px white;
+        }
+
+        .cell.matched {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        .color0 {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b);
+        }
+
+        .color1 {
+            background: radial-gradient(circle at 30% 30%, #74b9ff, #0984e3);
+        }
+
+        .color2 {
+            background: radial-gradient(circle at 30% 30%, #55efc4, #00b894);
+        }
+
+        .color3 {
+            background: radial-gradient(circle at 30% 30%, #ffeaa7, #fdcb6e);
+        }
+
+        .color4 {
+            background: radial-gradient(circle at 30% 30%, #a29bfe, #6c5ce7);
+        }
+
+        .color5 {
+            background: radial-gradient(circle at 30% 30%, #fd79a8, #e84393);
         }
     </style>
 </head>
 
 <body>
-    <div id="game-container"></div>
+    <div id="header">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>MOVES: <span id="moves">30</span></div>
+        <div>LEVEL: <span id="level">1</span></div>
+    </div>
+    <div id="game"></div>
 
-    <script src="js/sl_bridge.js?v=23"></script>
-    <script src="js/game.js?v=23"></script>
+    <script>
+        // ===== GAME CONFIG =====
+        const COLS = 8;
+        const ROWS = 8;
+        const COLORS = 6;
+
+        // ===== GAME STATE =====
+        let grid = [];
+        let selected = null;
+        let score = 0;
+        let moves = 30;
+        let level = 1;
+        let isAnimating = false;
+
+        // ===== INIT =====
+        function init() {
+            createGrid();
+            removeInitialMatches();
+            render();
+        }
+
+        function createGrid() {
+            grid = [];
+            for (let r = 0; r < ROWS; r++) {
+                grid[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    grid[r][c] = randomColor();
+                }
+            }
+        }
+
+        function randomColor() {
+            return Math.floor(Math.random() * COLORS);
+        }
+
+        function removeInitialMatches() {
+            let hasMatches = true;
+            while (hasMatches) {
+                hasMatches = false;
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        // Check horizontal
+                        if (c >= 2 && grid[r][c] === grid[r][c - 1] && grid[r][c] === grid[r][c - 2]) {
+                            grid[r][c] = (grid[r][c] + 1) % COLORS;
+                            hasMatches = true;
+                        }
+                        // Check vertical
+                        if (r >= 2 && grid[r][c] === grid[r - 1][c] && grid[r][c] === grid[r - 2][c]) {
+                            grid[r][c] = (grid[r][c] + 1) % COLORS;
+                            hasMatches = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== RENDER =====
+        function render() {
+            const gameEl = document.getElementById('game');
+            gameEl.innerHTML = '';
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = `cell color${grid[r][c]}`;
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    if (selected && selected.r === r && selected.c === c) {
+                        cell.classList.add('selected');
+                    }
+
+                    cell.onclick = () => onCellClick(r, c);
+                    gameEl.appendChild(cell);
+                }
+            }
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('level').textContent = level;
+        }
+
+        // ===== CLICK HANDLER =====
+        function onCellClick(r, c) {
+            if (isAnimating || moves <= 0) return;
+
+            if (!selected) {
+                selected = { r, c };
+                render();
+            } else {
+                const dr = Math.abs(r - selected.r);
+                const dc = Math.abs(c - selected.c);
+
+                // Adjacent check
+                if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+                    trySwap(selected.r, selected.c, r, c);
+                }
+                selected = null;
+                render();
+            }
+        }
+
+        // ===== SWAP =====
+        function trySwap(r1, c1, r2, c2) {
+            // Swap
+            swap(r1, c1, r2, c2);
+
+            const matches = findMatches();
+            if (matches.length > 0) {
+                moves--;
+                processMatches(matches);
+            } else {
+                // Swap back
+                swap(r1, c1, r2, c2);
+            }
+        }
+
+        function swap(r1, c1, r2, c2) {
+            const temp = grid[r1][c1];
+            grid[r1][c1] = grid[r2][c2];
+            grid[r2][c2] = temp;
+        }
+
+        // ===== FIND MATCHES =====
+        function findMatches() {
+            const matched = new Set();
+
+            // Horizontal
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS - 2; c++) {
+                    if (grid[r][c] === grid[r][c + 1] && grid[r][c] === grid[r][c + 2]) {
+                        matched.add(`${r},${c}`);
+                        matched.add(`${r},${c + 1}`);
+                        matched.add(`${r},${c + 2}`);
+                    }
+                }
+            }
+
+            // Vertical
+            for (let r = 0; r < ROWS - 2; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (grid[r][c] === grid[r + 1][c] && grid[r][c] === grid[r + 2][c]) {
+                        matched.add(`${r},${c}`);
+                        matched.add(`${r + 1},${c}`);
+                        matched.add(`${r + 2},${c}`);
+                    }
+                }
+            }
+
+            return Array.from(matched).map(s => {
+                const [r, c] = s.split(',').map(Number);
+                return { r, c };
+            });
+        }
+
+        // ===== PROCESS MATCHES =====
+        function processMatches(matches) {
+            isAnimating = true;
+
+            // Mark as -1 (empty)
+            matches.forEach(m => {
+                grid[m.r][m.c] = -1;
+            });
+
+            score += matches.length * 10;
+            render();
+
+            // After animation, apply gravity
+            setTimeout(() => {
+                applyGravity();
+            }, 200);
+        }
+
+        // ===== GRAVITY =====
+        function applyGravity() {
+            // For each column, drop tiles down
+            for (let c = 0; c < COLS; c++) {
+                let writeRow = ROWS - 1;
+
+                // Move existing tiles down
+                for (let r = ROWS - 1; r >= 0; r--) {
+                    if (grid[r][c] !== -1) {
+                        grid[writeRow][c] = grid[r][c];
+                        if (writeRow !== r) {
+                            grid[r][c] = -1;
+                        }
+                        writeRow--;
+                    }
+                }
+
+                // Fill empty spaces at top with new colors
+                for (let r = writeRow; r >= 0; r--) {
+                    grid[r][c] = randomColor();
+                }
+            }
+
+            render();
+
+            // Check for chain matches
+            setTimeout(() => {
+                const newMatches = findMatches();
+                if (newMatches.length > 0) {
+                    processMatches(newMatches);
+                } else {
+                    isAnimating = false;
+                    checkGameState();
+                }
+            }, 250);
+        }
+
+        // ===== GAME STATE =====
+        function checkGameState() {
+            if (score >= level * 500) {
+                level++;
+                moves += 10;
+                alert('Level Complete! 🎉');
+            } else if (moves <= 0) {
+                alert('Game Over! Score: ' + score);
+                score = 0;
+                moves = 30;
+                level = 1;
+                createGrid();
+                removeInitialMatches();
+            }
+            render();
+        }
+
+        // ===== START =====
+        init();
+    </script>
 </body>
 
 </html>
