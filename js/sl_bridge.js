@@ -1,4 +1,5 @@
-// SECOND LIFE BRIDGE FOR BALLOON CRUSH
+// SECOND LIFE BRIDGE FOR BALLOON CRUSH v2
+// Handles player name, level sync, and score submission
 
 function getUrlParameter(name) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -9,10 +10,12 @@ function getUrlParameter(name) {
 
 let playerName = "GUEST";
 let slUrl = "";
+let startLevel = 1;
 
 document.addEventListener('DOMContentLoaded', function () {
     const p = getUrlParameter('player');
     const u = getUrlParameter('sl_url');
+    const l = getUrlParameter('level');
 
     if (p && p !== "") {
         playerName = p;
@@ -23,33 +26,55 @@ document.addEventListener('DOMContentLoaded', function () {
         slUrl = u;
     }
 
-    console.log("SL Bridge Init: " + playerName);
-});
-
-window.submitScoreToSL = function (score) {
-    if (!slUrl) {
-        console.warn("No SL URL found, cannot submit score.");
-        if (playerName !== "GUEST") {
-            document.getElementById('high-score-msg').innerText = "Connection Failed!";
+    if (l && l !== "" && parseInt(l) > 0) {
+        startLevel = parseInt(l);
+        // Set the level in the game
+        if (typeof currentLevel !== 'undefined') {
+            currentLevel = startLevel;
         }
-        return;
+        // Also save to localStorage as backup
+        localStorage.setItem('balloonCrush_level', startLevel.toString());
     }
 
-    if (playerName === "GUEST") return;
+    console.log("SL Bridge Init: " + playerName + " at Level " + startLevel);
+});
 
-    document.getElementById('high-score-msg').innerText = "Sending Score...";
+// Called when player wins a level
+window.submitLevelToSL = function (level) {
+    if (!slUrl || playerName === "GUEST") return;
 
     fetch(slUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ name: playerName, score: score })
+        body: JSON.stringify({ name: playerName, level: level, score: 0 })
+    }).catch(err => console.error(err));
+};
+
+// Called when game ends with score
+window.submitScoreToSL = function (score, level) {
+    if (!slUrl) {
+        console.warn("No SL URL found, cannot submit score.");
+        return;
+    }
+
+    if (playerName === "GUEST") return;
+
+    fetch(slUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ name: playerName, score: score, level: level || 1 })
     })
         .then(() => {
-            document.getElementById('high-score-msg').innerText = "Score Sent to Second Life!";
+            console.log("Score sent to SL: " + score);
         })
         .catch(err => {
             console.error(err);
-            document.getElementById('high-score-msg').innerText = "Error Sending Score";
         });
+};
+
+// Export startLevel for game.js to use
+window.getStartLevel = function () {
+    return startLevel;
 };

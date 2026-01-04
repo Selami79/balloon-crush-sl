@@ -261,11 +261,24 @@ canvas.height = ROWS * TILE_SIZE;
 
 // Load/Save
 function loadProgress() {
+    // First check if SL provided a level via URL
+    if (typeof window.getStartLevel === 'function') {
+        let slLevel = window.getStartLevel();
+        if (slLevel > 1) {
+            currentLevel = slLevel;
+            return;
+        }
+    }
+    // Fallback to localStorage
     let saved = localStorage.getItem('balloonCrush_level');
     if (saved) currentLevel = parseInt(saved);
 }
 function saveProgress() {
     localStorage.setItem('balloonCrush_level', currentLevel.toString());
+    // Also notify SL about level completion
+    if (typeof window.submitLevelToSL === 'function') {
+        window.submitLevelToSL(currentLevel);
+    }
 }
 
 // === LEVEL MANAGEMENT ===
