@@ -86,12 +86,15 @@ function create() {
 function createUI() {
     const style = { fontFamily: 'Fredoka One, Arial', fontSize: '20px', fill: '#fff' };
 
-    this.add.rectangle(220, 50, 400, 80, 0x000000, 0.3).setRadius(15);
+    // Use Graphics for a real rounded rectangle UI panel
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0x000000, 0.3);
+    graphics.fillRoundedRect(20, 10, 400, 100, 15);
 
-    scoreText = this.add.text(40, 35, 'SCORE: 0', style);
-    movesText = this.add.text(280, 35, 'MOVES: 25', style);
-    levelText = this.add.text(170, 70, 'LEVEL ' + currentLevel, { ...style, fontSize: '18px', fill: '#FFDC00' });
-    targetText = this.add.text(170, 95, 'TARGET: 500', { ...style, fontSize: '14px' });
+    scoreText = this.add.text(40, 30, 'SCORE: 0', style);
+    movesText = this.add.text(280, 30, 'MOVES: 25', style);
+    levelText = this.add.text(175, 65, 'LEVEL ' + currentLevel, { ...style, fontSize: '18px', fill: '#FFDC00' });
+    targetText = this.add.text(175, 90, 'TARGET: ' + targetScore, { ...style, fontSize: '14px' });
 
     updateUI();
 }
