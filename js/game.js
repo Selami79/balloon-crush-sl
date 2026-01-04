@@ -282,7 +282,7 @@ function handleMatches(matches) {
 }
 
 function applyGravity() {
-    let dropTweens = [];
+    const scene = this;
 
     for (let i = 0; i < GRID_SIZE; i++) {
         let emptySpots = 0;
@@ -290,7 +290,7 @@ function applyGravity() {
             if (grid[i][j].isMatched) {
                 emptySpots++;
             } else if (emptySpots > 0) {
-                // Move down
+                // Move tile down
                 const targetRow = j + emptySpots;
                 const tile = grid[i][j];
                 const emptyTile = grid[i][targetRow];
@@ -302,41 +302,42 @@ function applyGravity() {
                 tile.j = targetRow;
                 emptyTile.j = j;
 
-                dropTweens.push({
+                // Animate the drop
+                scene.tweens.add({
                     targets: tile.sprite,
                     y: OFFSET_Y + targetRow * TILE_SIZE + TILE_SIZE / 2,
-                    duration: emptySpots * 100
+                    duration: 150 + emptySpots * 50,
+                    ease: 'Bounce.easeOut'
                 });
             }
         }
 
-        // Fill new tiles
+        // Fill new tiles at the top
         for (let k = 0; k < emptySpots; k++) {
             const row = k;
-            const newTile = createTile.call(this, i, row);
-            newTile.sprite.y = -50;
+            const newTile = createTile.call(scene, i, row);
+            newTile.sprite.y = -50 - (emptySpots - k) * TILE_SIZE;
+            newTile.isMatched = false;
             grid[i][row] = newTile;
 
-            dropTweens.push({
+            scene.tweens.add({
                 targets: newTile.sprite,
                 y: OFFSET_Y + row * TILE_SIZE + TILE_SIZE / 2,
                 duration: 300,
-                delay: 200
+                delay: k * 50,
+                ease: 'Bounce.easeOut'
             });
         }
     }
 
-    this.tweens.add({
-        targets: {}, // Dummy
-        duration: 400,
-        onComplete: () => {
-            const nextMatches = findMatches();
-            if (nextMatches.length > 0) {
-                handleMatches.call(this, nextMatches);
-            } else {
-                isMoving = false;
-                checkEndGame.call(this);
-            }
+    // Wait for animations then check for chain matches
+    scene.time.delayedCall(500, () => {
+        const nextMatches = findMatches();
+        if (nextMatches.length > 0) {
+            handleMatches.call(scene, nextMatches);
+        } else {
+            isMoving = false;
+            checkEndGame.call(scene);
         }
     });
 }
