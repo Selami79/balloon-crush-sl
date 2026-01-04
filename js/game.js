@@ -1,16 +1,37 @@
-// BALLOON CRUSH - ULTIMATE ENGINE v3.0
-// Special Balloons, Power Combos, Hints, Auto-Shuffle
+// BALLOON CRUSH - LEVEL SYSTEM ENGINE v4.0
+// Full Candy Crush Style: Levels, Stars, Progression
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
+// UI Elements
 const scoreEl = document.getElementById('score');
 const movesEl = document.getElementById('moves');
-const gameOverEl = document.getElementById('game-over');
-const finalScoreEl = document.getElementById('final-score');
+const levelEl = document.getElementById('level');
+const targetScoreEl = document.getElementById('target-score');
+const progressEl = document.getElementById('progress');
+
+// Popups
+const levelStartPopup = document.getElementById('level-start');
+const levelCompletePopup = document.getElementById('level-complete');
+const levelFailedPopup = document.getElementById('level-failed');
+
+// === LEVEL CONFIGURATION ===
+const LEVELS = [
+    { target: 500, moves: 25, colors: 4, rows: 8, cols: 8 },   // Level 1
+    { target: 800, moves: 22, colors: 4, rows: 8, cols: 8 },   // Level 2
+    { target: 1200, moves: 20, colors: 5, rows: 8, cols: 8 },   // Level 3
+    { target: 1500, moves: 20, colors: 5, rows: 8, cols: 8 },   // Level 4
+    { target: 2000, moves: 18, colors: 5, rows: 8, cols: 8 },   // Level 5
+    { target: 2500, moves: 18, colors: 6, rows: 8, cols: 8 },   // Level 6
+    { target: 3000, moves: 16, colors: 6, rows: 8, cols: 8 },   // Level 7
+    { target: 3500, moves: 16, colors: 6, rows: 8, cols: 8 },   // Level 8
+    { target: 4000, moves: 15, colors: 6, rows: 8, cols: 8 },   // Level 9
+    { target: 5000, moves: 15, colors: 6, rows: 8, cols: 8 },   // Level 10
+    { target: 6000, moves: 14, colors: 6, rows: 8, cols: 8 },   // Level 11+
+];
 
 // === CONFIG ===
-const COLS = 8;
-const ROWS = 8;
 const TILE_SIZE = 50;
 
 const COLORS = [
@@ -22,12 +43,11 @@ const COLORS = [
     { main: '#FF851B', light: '#FFB366', dark: '#CC5C00' }
 ];
 
-// Special Types
 const TYPE_NORMAL = 0;
-const TYPE_STRIPED_H = 1; // Horizontal Rocket
-const TYPE_STRIPED_V = 2; // Vertical Rocket
-const TYPE_BOMB = 3;      // 3x3 Bomb
-const TYPE_COLOR_BOMB = 4; // Clears all of one color
+const TYPE_STRIPED_H = 1;
+const TYPE_STRIPED_V = 2;
+const TYPE_BOMB = 3;
+const TYPE_COLOR_BOMB = 4;
 
 // === AUDIO ===
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -50,7 +70,7 @@ function playSound(type) {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(800, now);
             osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
-            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.setValueAtTime(0.25, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
             osc.start(now); osc.stop(now + 0.1);
             break;
@@ -58,34 +78,48 @@ function playSound(type) {
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(400, now);
             osc.frequency.linearRampToValueAtTime(600, now + 0.05);
-            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.setValueAtTime(0.15, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
             osc.start(now); osc.stop(now + 0.08);
             break;
         case 'combo':
             osc.type = 'sine';
             osc.frequency.setValueAtTime(523, now);
-            gain.gain.setValueAtTime(0.3, now);
-            osc.frequency.setValueAtTime(659, now + 0.1);
-            osc.frequency.setValueAtTime(784, now + 0.2);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now); osc.stop(now + 0.3);
+            osc.frequency.setValueAtTime(659, now + 0.08);
+            osc.frequency.setValueAtTime(784, now + 0.16);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
             break;
         case 'special':
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(200, now);
-            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
-            gain.gain.setValueAtTime(0.25, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-            osc.start(now); osc.stop(now + 0.4);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.25);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
             break;
-        case 'gameover':
+        case 'win':
+            const notes = [523, 659, 784, 1047];
+            notes.forEach((freq, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'sine';
+                o.frequency.setValueAtTime(freq, now + i * 0.15);
+                g.gain.setValueAtTime(0.2, now + i * 0.15);
+                g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.3);
+                o.start(now + i * 0.15);
+                o.stop(now + i * 0.15 + 0.3);
+            });
+            break;
+        case 'fail':
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.linearRampToValueAtTime(100, now + 0.5);
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.5);
-            osc.start(now); osc.stop(now + 0.5);
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.4);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
             break;
     }
 }
@@ -121,7 +155,7 @@ class Particle {
     }
 }
 
-function spawnParticles(x, y, color, count = 10) {
+function spawnParticles(x, y, color, count = 8) {
     for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
 }
 
@@ -143,12 +177,12 @@ class FloatingText {
     }
     draw(ctx) {
         ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.font = 'bold 22px Arial';
+        ctx.font = 'bold 20px Fredoka One';
         ctx.textAlign = 'center';
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 3;
         ctx.strokeText(this.text, this.x, this.y);
+        ctx.fillStyle = this.color;
         ctx.fillText(this.text, this.x, this.y);
         ctx.globalAlpha = 1;
     }
@@ -156,33 +190,24 @@ class FloatingText {
 
 // === SHAKE ===
 let shakeIntensity = 0;
-
 function shake(intensity) { shakeIntensity = intensity; }
 
-// === HINT SYSTEM ===
+// === HINT ===
 let hintTimer = 0;
 let hintTile = null;
-const HINT_DELAY = 180; // frames (~3 sec at 60fps)
+const HINT_DELAY = 180;
 
 function findHint() {
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            // Try swap right
             if (c < COLS - 1) {
                 swapTiles(c, r, c + 1, r);
-                if (findMatches().length > 0) {
-                    swapTiles(c, r, c + 1, r);
-                    return { c1: c, r1: r, c2: c + 1, r2: r };
-                }
+                if (findMatches().length > 0) { swapTiles(c, r, c + 1, r); return { c1: c, r1: r, c2: c + 1, r2: r }; }
                 swapTiles(c, r, c + 1, r);
             }
-            // Try swap down
             if (r < ROWS - 1) {
                 swapTiles(c, r, c, r + 1);
-                if (findMatches().length > 0) {
-                    swapTiles(c, r, c, r + 1);
-                    return { c1: c, r1: r, c2: c, r2: r + 1 };
-                }
+                if (findMatches().length > 0) { swapTiles(c, r, c, r + 1); return { c1: c, r1: r, c2: c, r2: r + 1 }; }
                 swapTiles(c, r, c, r + 1);
             }
         }
@@ -194,27 +219,61 @@ function swapTiles(c1, r1, c2, r2) {
     let temp = grid[c1][r1];
     grid[c1][r1] = grid[c2][r2];
     grid[c2][r2] = temp;
-    grid[c1][r1].c = c1; grid[c1][r1].r = r1;
-    grid[c2][r2].c = c2; grid[c2][r2].r = r2;
+    if (grid[c1][r1]) { grid[c1][r1].c = c1; grid[c1][r1].r = r1; }
+    if (grid[c2][r2]) { grid[c2][r2].c = c2; grid[c2][r2].r = r2; }
 }
 
 // === GAME STATE ===
 let grid = [];
 let score = 0;
-let moves = 30;
+let moves = 0;
 let comboCount = 0;
 let state = 'IDLE';
 let selectedTile = null;
 
-canvas.width = COLS * TILE_SIZE;
-canvas.height = ROWS * TILE_SIZE;
+let currentLevel = 1;
+let targetScore = 1000;
+let ROWS = 8;
+let COLS = 8;
+let numColors = 4;
 
-// === CORE ===
+// Load progress
+function loadProgress() {
+    let saved = localStorage.getItem('balloonCrush_level');
+    if (saved) currentLevel = parseInt(saved);
+}
 
-function startGame() {
+function saveProgress() {
+    localStorage.setItem('balloonCrush_level', currentLevel.toString());
+}
+
+// === LEVEL MANAGEMENT ===
+
+function showLevelStart() {
+    let cfg = LEVELS[Math.min(currentLevel - 1, LEVELS.length - 1)];
+
+    document.getElementById('popup-level').innerText = currentLevel;
+    document.getElementById('popup-target').innerText = cfg.target;
+    document.getElementById('popup-moves').innerText = cfg.moves;
+
+    levelStartPopup.style.display = 'flex';
+    levelCompletePopup.style.display = 'none';
+    levelFailedPopup.style.display = 'none';
+}
+
+function startLevel() {
     initAudio();
+    levelStartPopup.style.display = 'none';
+
+    let cfg = LEVELS[Math.min(currentLevel - 1, LEVELS.length - 1)];
+
+    targetScore = cfg.target;
+    moves = cfg.moves;
+    numColors = cfg.colors;
+    ROWS = cfg.rows;
+    COLS = cfg.cols;
+
     score = 0;
-    moves = 30;
     comboCount = 0;
     state = 'IDLE';
     selectedTile = null;
@@ -222,17 +281,64 @@ function startGame() {
     hintTimer = 0;
     particles = [];
     floatingTexts = [];
-    updateUI();
-    gameOverEl.style.display = 'none';
 
+    canvas.width = COLS * TILE_SIZE;
+    canvas.height = ROWS * TILE_SIZE;
+
+    updateUI();
     createValidGrid();
     gameLoop();
 }
 
+function levelComplete() {
+    state = 'COMPLETE';
+    playSound('win');
+
+    let stars = 1;
+    if (score >= targetScore * 1.5) stars = 2;
+    if (score >= targetScore * 2) stars = 3;
+
+    document.getElementById('final-score').innerText = score;
+    document.getElementById('star1').className = 'star active';
+    document.getElementById('star2').className = stars >= 2 ? 'star active' : 'star';
+    document.getElementById('star3').className = stars >= 3 ? 'star active' : 'star';
+
+    levelCompletePopup.style.display = 'flex';
+
+    if (window.submitScoreToSL) window.submitScoreToSL(score);
+
+    currentLevel++;
+    saveProgress();
+}
+
+function nextLevel() {
+    levelCompletePopup.style.display = 'none';
+    showLevelStart();
+}
+
+function levelFailed() {
+    state = 'FAILED';
+    playSound('fail');
+
+    document.getElementById('failed-score').innerText = score;
+    document.getElementById('needed-score').innerText = targetScore - score;
+
+    levelFailedPopup.style.display = 'flex';
+}
+
+function retryLevel() {
+    levelFailedPopup.style.display = 'none';
+    showLevelStart();
+}
+
+// === GRID ===
+
 function createValidGrid() {
+    let attempts = 0;
     do {
         createGrid();
-    } while (findMatches().length > 0 || !findHint());
+        attempts++;
+    } while ((findMatches().length > 0 || !findHint()) && attempts < 100);
 }
 
 function createGrid() {
@@ -252,7 +358,7 @@ function createTile(c, r, type = TYPE_NORMAL, colorIdx = null) {
         y: r * TILE_SIZE,
         targetX: c * TILE_SIZE,
         targetY: r * TILE_SIZE,
-        color: colorIdx !== null ? colorIdx : Math.floor(Math.random() * COLORS.length),
+        color: colorIdx !== null ? colorIdx : Math.floor(Math.random() * numColors),
         type: type,
         scale: 1,
         targetScale: 1,
@@ -303,23 +409,12 @@ function attemptSwap(t1, t2) {
     state = 'ANIMATING';
     playSound('swap');
 
-    // Check special combo (two specials together)
     let tile1 = grid[t1.c][t1.r];
     let tile2 = grid[t2.c][t2.r];
 
     swapTiles(t1.c, t1.r, t2.c, t2.r);
     updateTargets();
 
-    // Check for special + special combo
-    if (tile1.type !== TYPE_NORMAL && tile2.type !== TYPE_NORMAL) {
-        moves--;
-        comboCount = 0;
-        updateUI();
-        triggerSpecialCombo(t1, t2);
-        return;
-    }
-
-    // Check for color bomb + normal
     if (tile1.type === TYPE_COLOR_BOMB || tile2.type === TYPE_COLOR_BOMB) {
         let colorBomb = tile1.type === TYPE_COLOR_BOMB ? tile1 : tile2;
         let other = tile1.type === TYPE_COLOR_BOMB ? tile2 : tile1;
@@ -346,56 +441,7 @@ function attemptSwap(t1, t2) {
     }, 200);
 }
 
-// === SPECIAL MECHANICS ===
-
-function triggerSpecialCombo(t1, t2) {
-    let tile1 = grid[t1.c][t1.r];
-    let tile2 = grid[t2.c][t2.r];
-
-    playSound('special');
-    shake(15);
-
-    let toDestroy = new Set();
-
-    // Cross explosion (Striped + Striped)
-    if ((tile1.type === TYPE_STRIPED_H || tile1.type === TYPE_STRIPED_V) &&
-        (tile2.type === TYPE_STRIPED_H || tile2.type === TYPE_STRIPED_V)) {
-        // Clear entire row AND column of both
-        for (let i = 0; i < COLS; i++) toDestroy.add(grid[i][t1.r]);
-        for (let i = 0; i < COLS; i++) toDestroy.add(grid[i][t2.r]);
-        for (let i = 0; i < ROWS; i++) toDestroy.add(grid[t1.c][i]);
-        for (let i = 0; i < ROWS; i++) toDestroy.add(grid[t2.c][i]);
-    }
-    // Bomb + Bomb = 5x5
-    else if (tile1.type === TYPE_BOMB && tile2.type === TYPE_BOMB) {
-        for (let dc = -2; dc <= 2; dc++) {
-            for (let dr = -2; dr <= 2; dr++) {
-                let nc = t1.c + dc, nr = t1.r + dr;
-                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
-                    toDestroy.add(grid[nc][nr]);
-                }
-            }
-        }
-    }
-    // Bomb + Striped = 3 rows or 3 cols
-    else if ((tile1.type === TYPE_BOMB && (tile2.type === TYPE_STRIPED_H || tile2.type === TYPE_STRIPED_V)) ||
-        (tile2.type === TYPE_BOMB && (tile1.type === TYPE_STRIPED_H || tile1.type === TYPE_STRIPED_V))) {
-        for (let dr = -1; dr <= 1; dr++) {
-            let row = t1.r + dr;
-            if (row >= 0 && row < ROWS) {
-                for (let i = 0; i < COLS; i++) toDestroy.add(grid[i][row]);
-            }
-        }
-        for (let dc = -1; dc <= 1; dc++) {
-            let col = t1.c + dc;
-            if (col >= 0 && col < COLS) {
-                for (let i = 0; i < ROWS; i++) toDestroy.add(grid[col][i]);
-            }
-        }
-    }
-
-    destroyTiles(Array.from(toDestroy));
-}
+// === SPECIALS ===
 
 function triggerColorBomb(bomb, targetColor) {
     playSound('special');
@@ -409,7 +455,6 @@ function triggerColorBomb(bomb, targetColor) {
             }
         }
     }
-
     destroyTiles(toDestroy);
 }
 
@@ -422,24 +467,19 @@ function destroyTiles(tiles) {
         if (!t) return;
         t.isMatched = true;
         t.targetScale = 0;
-
-        let px = t.x + TILE_SIZE / 2;
-        let py = t.y + TILE_SIZE / 2;
-        spawnParticles(px, py, COLORS[t.color].main, 8);
+        spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color % COLORS.length].main, 8);
         playSound('pop');
     });
 
     floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height / 2, '+' + points, '#FF0'));
-
     setTimeout(() => applyGravity(), 200);
 }
 
-// === MATCH DETECTION ===
+// === MATCHING ===
 
 function findMatches() {
     let matched = new Set();
 
-    // Horizontal
     for (let r = 0; r < ROWS; r++) {
         let streak = 1;
         for (let c = 1; c <= COLS; c++) {
@@ -447,16 +487,13 @@ function findMatches() {
                 streak++;
             } else {
                 if (streak >= 3) {
-                    for (let i = c - streak; i < c; i++) {
-                        matched.add(grid[i][r]);
-                    }
+                    for (let i = c - streak; i < c; i++) matched.add(grid[i][r]);
                 }
                 streak = 1;
             }
         }
     }
 
-    // Vertical
     for (let c = 0; c < COLS; c++) {
         let streak = 1;
         for (let r = 1; r <= ROWS; r++) {
@@ -464,9 +501,7 @@ function findMatches() {
                 streak++;
             } else {
                 if (streak >= 3) {
-                    for (let i = r - streak; i < r; i++) {
-                        matched.add(grid[c][i]);
-                    }
+                    for (let i = r - streak; i < r; i++) matched.add(grid[c][i]);
                 }
                 streak = 1;
             }
@@ -479,7 +514,6 @@ function findMatches() {
 function processMatches(matches, swapPos1 = null, swapPos2 = null) {
     comboCount++;
 
-    // Check for special creation
     let specialCreated = null;
     if (swapPos1 && swapPos2) {
         specialCreated = checkForSpecialCreation(matches, swapPos1, swapPos2);
@@ -492,10 +526,9 @@ function processMatches(matches, swapPos1 = null, swapPos2 = null) {
     if (comboCount > 1) {
         playSound('combo');
         shake(comboCount * 3);
-        floatingTexts.push(new FloatingText(canvas.width / 2, 50, 'COMBO x' + comboCount + '!', '#FF0'));
+        floatingTexts.push(new FloatingText(canvas.width / 2, 40, 'COMBO x' + comboCount + '!', '#FF0'));
     }
 
-    // Trigger special effects first
     matches.forEach(t => {
         if (t.type !== TYPE_NORMAL && !t.isMatched) {
             triggerSpecialEffect(t);
@@ -506,10 +539,7 @@ function processMatches(matches, swapPos1 = null, swapPos2 = null) {
         if (t.isMatched) return;
         t.isMatched = true;
         t.targetScale = 0;
-
-        let px = t.x + TILE_SIZE / 2;
-        let py = t.y + TILE_SIZE / 2;
-        spawnParticles(px, py, COLORS[t.color].main, 6);
+        spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color % COLORS.length].main, 6);
         playSound('pop');
     });
 
@@ -519,20 +549,16 @@ function processMatches(matches, swapPos1 = null, swapPos2 = null) {
 }
 
 function checkForSpecialCreation(matches, pos1, pos2) {
-    // Find largest group
     let hGroups = {};
     let vGroups = {};
 
     matches.forEach(t => {
-        let hKey = t.r;
-        let vKey = t.c;
-        if (!hGroups[hKey]) hGroups[hKey] = [];
-        if (!vGroups[vKey]) vGroups[vKey] = [];
-        hGroups[hKey].push(t);
-        vGroups[vKey].push(t);
+        if (!hGroups[t.r]) hGroups[t.r] = [];
+        if (!vGroups[t.c]) vGroups[t.c] = [];
+        hGroups[t.r].push(t);
+        vGroups[t.c].push(t);
     });
 
-    // Check for 5-in-a-row (Color Bomb)
     for (let key in hGroups) {
         if (hGroups[key].length >= 5) {
             return { pos: pos1, type: TYPE_COLOR_BOMB, color: grid[pos1.c][pos1.r].color };
@@ -544,22 +570,17 @@ function checkForSpecialCreation(matches, pos1, pos2) {
         }
     }
 
-    // Check for L/T shape (Bomb)
-    for (let key in hGroups) {
+    for (let hKey in hGroups) {
         for (let vKey in vGroups) {
-            let hGroup = hGroups[key];
-            let vGroup = vGroups[vKey];
-            if (hGroup.length >= 3 && vGroup.length >= 3) {
-                // Check intersection
-                let intersection = hGroup.find(h => vGroup.some(v => v.c === h.c && v.r === h.r));
-                if (intersection) {
-                    return { pos: { c: intersection.c, r: intersection.r }, type: TYPE_BOMB, color: intersection.color };
+            if (hGroups[hKey].length >= 3 && vGroups[vKey].length >= 3) {
+                let inter = hGroups[hKey].find(h => vGroups[vKey].some(v => v.c === h.c && v.r === h.r));
+                if (inter) {
+                    return { pos: { c: inter.c, r: inter.r }, type: TYPE_BOMB, color: inter.color };
                 }
             }
         }
     }
 
-    // Check for 4-in-a-row (Striped)
     for (let key in hGroups) {
         if (hGroups[key].length === 4) {
             return { pos: pos1, type: TYPE_STRIPED_V, color: grid[pos1.c][pos1.r].color };
@@ -578,19 +599,15 @@ function triggerSpecialEffect(tile) {
     let toDestroy = [];
 
     if (tile.type === TYPE_STRIPED_H) {
-        for (let i = 0; i < COLS; i++) {
-            if (!grid[i][tile.r].isMatched) toDestroy.push(grid[i][tile.r]);
-        }
+        for (let i = 0; i < COLS; i++) if (!grid[i][tile.r].isMatched) toDestroy.push(grid[i][tile.r]);
     } else if (tile.type === TYPE_STRIPED_V) {
-        for (let i = 0; i < ROWS; i++) {
-            if (!grid[tile.c][i].isMatched) toDestroy.push(grid[tile.c][i]);
-        }
+        for (let i = 0; i < ROWS; i++) if (!grid[tile.c][i].isMatched) toDestroy.push(grid[tile.c][i]);
     } else if (tile.type === TYPE_BOMB) {
         for (let dc = -1; dc <= 1; dc++) {
             for (let dr = -1; dr <= 1; dr++) {
                 let nc = tile.c + dc, nr = tile.r + dr;
-                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
-                    if (!grid[nc][nr].isMatched) toDestroy.push(grid[nc][nr]);
+                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !grid[nc][nr].isMatched) {
+                    toDestroy.push(grid[nc][nr]);
                 }
             }
         }
@@ -602,7 +619,7 @@ function triggerSpecialEffect(tile) {
         toDestroy.forEach(t => {
             t.isMatched = true;
             t.targetScale = 0;
-            spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color].main, 5);
+            spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color % COLORS.length].main, 5);
         });
         score += toDestroy.length * 15;
         updateUI();
@@ -630,13 +647,9 @@ function applyGravity(specialCreated = null) {
         }
     }
 
-    // Place special balloon if created
-    if (specialCreated) {
-        let p = specialCreated.pos;
-        if (grid[p.c] && grid[p.c][p.r]) {
-            grid[p.c][p.r].type = specialCreated.type;
-            grid[p.c][p.r].color = specialCreated.color;
-        }
+    if (specialCreated && grid[specialCreated.pos.c] && grid[specialCreated.pos.c][specialCreated.pos.r]) {
+        grid[specialCreated.pos.c][specialCreated.pos.r].type = specialCreated.type;
+        grid[specialCreated.pos.c][specialCreated.pos.r].color = specialCreated.color;
     }
 
     setTimeout(() => {
@@ -644,12 +657,11 @@ function applyGravity(specialCreated = null) {
         if (newMatches.length > 0) {
             processMatches(newMatches);
         } else {
-            // Check if any moves possible
             if (!findHint()) {
                 shuffleGrid();
             } else {
                 state = 'IDLE';
-                checkGameOver();
+                checkLevelStatus();
             }
         }
     }, 300);
@@ -666,7 +678,6 @@ function shuffleGrid() {
             }
         }
 
-        // Fisher-Yates shuffle
         for (let i = tiles.length - 1; i > 0; i--) {
             let j = Math.floor(Math.random() * (i + 1));
             [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
@@ -681,22 +692,20 @@ function shuffleGrid() {
             }
         }
 
-        // Keep shuffling until valid
         if (findMatches().length > 0 || !findHint()) {
             shuffleGrid();
         } else {
             state = 'IDLE';
+            checkLevelStatus();
         }
     }, 500);
 }
 
-function checkGameOver() {
-    if (moves <= 0) {
-        state = 'GAME_OVER';
-        playSound('gameover');
-        gameOverEl.style.display = 'block';
-        finalScoreEl.innerText = score;
-        if (window.submitScoreToSL) window.submitScoreToSL(score);
+function checkLevelStatus() {
+    if (score >= targetScore) {
+        levelComplete();
+    } else if (moves <= 0) {
+        levelFailed();
     }
 }
 
@@ -714,18 +723,30 @@ function updateTargets() {
 function updateUI() {
     scoreEl.innerText = score;
     movesEl.innerText = moves;
+    levelEl.innerText = currentLevel;
+    targetScoreEl.innerText = targetScore;
+
+    let progress = Math.min(100, (score / targetScore) * 100);
+    progressEl.style.width = progress + '%';
 }
 
 // === GAME LOOP ===
 
+let gameLoopRunning = false;
+
 function gameLoop() {
-    update();
-    render();
-    requestAnimationFrame(gameLoop);
+    if (gameLoopRunning) return;
+    gameLoopRunning = true;
+
+    function loop() {
+        update();
+        render();
+        requestAnimationFrame(loop);
+    }
+    loop();
 }
 
 function update() {
-    // Hint timer
     if (state === 'IDLE') {
         hintTimer++;
         if (hintTimer > HINT_DELAY && !hintTile) {
@@ -733,7 +754,6 @@ function update() {
         }
     }
 
-    // Update tiles
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
             let t = grid[c][r];
@@ -758,15 +778,13 @@ function render() {
 
     ctx.clearRect(-10, -10, canvas.width + 20, canvas.height + 20);
 
-    // Grid BG
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            ctx.fillStyle = (c + r) % 2 === 0 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)';
+            ctx.fillStyle = (c + r) % 2 === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
             ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
     }
 
-    // Hint highlight
     if (hintTile && state === 'IDLE') {
         let pulse = Math.sin(Date.now() / 150) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(255,255,0,${pulse * 0.4})`;
@@ -774,7 +792,6 @@ function render() {
         ctx.fillRect(hintTile.c2 * TILE_SIZE, hintTile.r2 * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
-    // Tiles
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
             let t = grid[c][r];
@@ -795,9 +812,8 @@ function drawTile(t) {
 
     if (size < 1) return;
 
-    let col = COLORS[t.color];
+    let col = COLORS[t.color % COLORS.length];
 
-    // Selection glow
     if (selectedTile && selectedTile.c === t.c && selectedTile.r === t.r) {
         ctx.shadowColor = '#fff';
         ctx.shadowBlur = 20;
@@ -808,13 +824,11 @@ function drawTile(t) {
         ctx.shadowBlur = 0;
     }
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.beginPath();
     ctx.ellipse(cx + 3, cy + 5, size * 0.9, size * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Body gradient
     let grad = ctx.createRadialGradient(cx - size * 0.3, cy - size * 0.3, 0, cx, cy, size * 1.2);
     grad.addColorStop(0, col.light);
     grad.addColorStop(0.5, col.main);
@@ -827,35 +841,31 @@ function drawTile(t) {
 
     // Special indicators
     if (t.type === TYPE_STRIPED_H) {
-        ctx.strokeStyle = '#FFF';
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(cx - size * 0.6, cy);
         ctx.lineTo(cx + size * 0.6, cy);
         ctx.stroke();
     } else if (t.type === TYPE_STRIPED_V) {
-        ctx.strokeStyle = '#FFF';
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(cx, cy - size * 0.6);
         ctx.lineTo(cx, cy + size * 0.6);
         ctx.stroke();
     } else if (t.type === TYPE_BOMB) {
-        ctx.fillStyle = '#FFF';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.beginPath();
         ctx.arc(cx, cy, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
-        // Plus sign
         ctx.strokeStyle = col.dark;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(cx - size * 0.15, cy);
-        ctx.lineTo(cx + size * 0.15, cy);
-        ctx.moveTo(cx, cy - size * 0.15);
-        ctx.lineTo(cx, cy + size * 0.15);
+        ctx.moveTo(cx - size * 0.15, cy); ctx.lineTo(cx + size * 0.15, cy);
+        ctx.moveTo(cx, cy - size * 0.15); ctx.lineTo(cx, cy + size * 0.15);
         ctx.stroke();
     } else if (t.type === TYPE_COLOR_BOMB) {
-        // Rainbow swirl
         ctx.fillStyle = '#FFF';
         ctx.beginPath();
         ctx.arc(cx, cy, size * 0.4, 0, Math.PI * 2);
@@ -866,13 +876,11 @@ function drawTile(t) {
         ctx.fill();
     }
 
-    // Specular
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.beginPath();
     ctx.ellipse(cx - size * 0.3, cy - size * 0.4, size * 0.25, size * 0.15, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Knot
     ctx.fillStyle = col.dark;
     ctx.beginPath();
     ctx.moveTo(cx, cy + size * 1.1);
@@ -881,7 +889,6 @@ function drawTile(t) {
     ctx.closePath();
     ctx.fill();
 
-    // String
     ctx.strokeStyle = col.dark;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -890,4 +897,6 @@ function drawTile(t) {
     ctx.stroke();
 }
 
-startGame();
+// === INIT ===
+loadProgress();
+showLevelStart();
