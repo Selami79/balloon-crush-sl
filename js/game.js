@@ -837,45 +837,45 @@ function triggerSpecialEffect(tile) {
 }
 
 function applyGravity(specialCreated = null) {
-    // Simple gravity: for each column, move all non-matched tiles down
+    // Simple gravity: for each column, drop tiles down to fill gaps
     for (let c = 0; c < COLS; c++) {
-        // First pass: collect all tiles we want to keep (in order from top to bottom)
-        let keepTiles = [];
-        let wallsWithPositions = []; // {tile, row}
+        // Step 1: Collect all non-matched tiles
+        let keepTiles = [];  // Regular tiles to reposition
+        let walls = [];      // Walls with their fixed positions
 
         for (let r = 0; r < ROWS; r++) {
             let tile = grid[c][r];
-            if (tile.obstacle === OBS_WALL && !tile.isMatched) {
-                // Live wall - remember its position
-                wallsWithPositions.push({ tile: tile, row: r });
-            } else if (!tile.isMatched) {
-                // Normal surviving tile
+            if (tile.isMatched) {
+                // This tile is destroyed, skip it
+                continue;
+            }
+            if (tile.obstacle === OBS_WALL) {
+                // Wall stays at its position
+                walls.push({ tile: tile, row: r });
+            } else {
+                // Regular tile, will be repositioned
                 keepTiles.push(tile);
             }
-            // Matched tiles are dropped
         }
 
-        // Second pass: rebuild column
-        // Clear column first
+        // Step 2: Clear the column
         for (let r = 0; r < ROWS; r++) {
             grid[c][r] = null;
         }
 
-        // Place walls back at their original positions
-        for (let w of wallsWithPositions) {
+        // Step 3: Place walls back at their fixed positions
+        for (let w of walls) {
             grid[c][w.row] = w.tile;
         }
 
-        // Now fill remaining spots from bottom up with keepTiles, skipping wall positions
+        // Step 4: Fill from bottom, skipping wall positions
         let tileIdx = keepTiles.length - 1;
         for (let r = ROWS - 1; r >= 0; r--) {
             if (grid[c][r] !== null) {
-                // Wall is here, skip
+                // Wall is here
                 continue;
             }
-
             if (tileIdx >= 0) {
-                // Place existing tile
                 let tile = keepTiles[tileIdx];
                 grid[c][r] = tile;
                 tile.c = c;
@@ -884,16 +884,17 @@ function applyGravity(specialCreated = null) {
                 tile.targetY = r * TILE_SIZE;
                 tileIdx--;
             } else {
-                // Need new tile
+                // Need a new tile
                 grid[c][r] = createNewTile(c, r);
             }
         }
     }
 
-    // Safety: fill any remaining nulls
+    // Safety check: fill any nulls
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
             if (!grid[c][r]) {
+                console.log("NULL FOUND at", c, r);
                 grid[c][r] = createNewTile(c, r);
             }
         }
