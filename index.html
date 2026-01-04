@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Balloon Crush</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #87CEEB;
+            /* Sky Blue */
+            background-image: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        canvas {
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .header {
+            text-align: center;
+            padding-top: 20px;
+            text-shadow: 2px 2px 0px #fff;
+        }
+
+        .score-board {
+            font-size: 24px;
+            color: #d35400;
+            font-weight: bold;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            display: none;
+            pointer-events: auto;
+            border: 5px solid #3498db;
+        }
+
+        button {
+            background: #2ecc71;
+            border: none;
+            padding: 15px 30px;
+            color: white;
+            font-size: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #27ae60;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+
+        #sl-status {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: #555;
+            text-shadow: 1px 1px 0 #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <canvas id="canvas" width="400" height="600"></canvas>
+
+        <div id="ui-layer">
+            <div class="header">
+                <div class="score-board">SCORE: <span id="score">0</span></div>
+                <div style="font-size:14px; color:#555;">Moves: <span id="moves">20</span></div>
+            </div>
+
+            <div id="sl-status">GUEST PLAYER</div>
+        </div>
+
+        <div id="game-over">
+            <h1 style="color:#e74c3c; margin:0 0 20px 0;">GAME OVER</h1>
+            <h3>Score: <span id="final-score">0</span></h3>
+            <div id="high-score-msg" style="color:#f39c12; margin-bottom:20px;"></div>
+            <button onclick="startGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/game.js"></script>
+    <script src="js/sl_bridge.js"></script>
+</body>
+
+</html>
