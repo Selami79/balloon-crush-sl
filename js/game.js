@@ -478,6 +478,24 @@ function createTile(c, r, type = TYPE_NORMAL, colorIdx = null) {
     };
 }
 
+// Create new tile for gravity fill (starts above screen)
+function createNewTile(c, r) {
+    return {
+        c, r,
+        x: c * TILE_SIZE,
+        y: -TILE_SIZE * 2, // Start above screen
+        targetX: c * TILE_SIZE,
+        targetY: r * TILE_SIZE,
+        color: Math.floor(Math.random() * numColors),
+        type: TYPE_NORMAL,
+        obstacle: OBS_NONE,
+        wallHealth: 0,
+        scale: 1,
+        targetScale: 1,
+        isMatched: false
+    };
+}
+
 // === INPUT ===
 canvas.addEventListener('mousedown', handleInput);
 canvas.addEventListener('touchstart', handleInput, { passive: false });
@@ -821,35 +839,41 @@ function triggerSpecialEffect(tile) {
 function applyGravity(specialCreated = null) {
     // Process each column
     for (let c = 0; c < COLS; c++) {
-        // Collect non-matched, non-wall tiles and track wall positions
-        let tiles = [];
-        let wallPositions = [];
+        // Collect surviving tiles and active wall positions
+        let survivingTiles = [];
+        let activeWallRows = [];
 
         for (let r = 0; r < ROWS; r++) {
-            if (grid[c][r].obstacle === OBS_WALL) {
-                wallPositions.push(r);
-            } else if (!grid[c][r].isMatched) {
-                tiles.push(grid[c][r]);
+            let tile = grid[c][r];
+            // Only count walls that are NOT matched (still alive)
+            if (tile.obstacle === OBS_WALL && !tile.isMatched) {
+                activeWallRows.push(r);
+            } else if (!tile.isMatched) {
+                // Surviving non-wall tile
+                survivingTiles.push(tile);
             }
+            // Matched tiles (including destroyed walls) are ignored
         }
 
         // Rebuild column from bottom to top
-        let tileIdx = tiles.length - 1;
+        let tileIdx = survivingTiles.length - 1;
         for (let r = ROWS - 1; r >= 0; r--) {
-            if (wallPositions.includes(r)) {
-                // Keep wall in place
+            if (activeWallRows.includes(r)) {
+                // Active wall stays in place - get the actual wall tile
+                // (it should already be there, but ensure grid reference is correct)
                 continue;
             } else if (tileIdx >= 0) {
-                // Place existing tile
-                grid[c][r] = tiles[tileIdx];
-                grid[c][r].r = r;
-                grid[c][r].targetY = r * TILE_SIZE;
+                // Place surviving tile
+                let tile = survivingTiles[tileIdx];
+                grid[c][r] = tile;
+                tile.c = c;
+                tile.r = r;
+                tile.targetX = c * TILE_SIZE;
+                tile.targetY = r * TILE_SIZE;
                 tileIdx--;
             } else {
                 // Create new tile for empty spot
-                grid[c][r] = createTile(c, r);
-                grid[c][r].y = -TILE_SIZE * (r + 1); // Start above screen
-                grid[c][r].targetY = r * TILE_SIZE;
+                grid[c][r] = createNewTile(c, r);
             }
         }
     }
