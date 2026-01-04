@@ -365,39 +365,90 @@ function retryLevel() {
 // === GRID ===
 
 function createValidGrid() {
+    createGridNoMatches();
+    placeObstacles();
+
+    // Verify no matches and hint exists, otherwise retry
     let attempts = 0;
-    do {
-        createGrid();
+    while ((findMatches().length > 0 || !findHint()) && attempts < 50) {
+        createGridNoMatches();
         placeObstacles();
         attempts++;
-    } while ((findMatches().length > 0 || !findHint()) && attempts < 100);
+    }
 }
 
-function createGrid() {
+function createGridNoMatches() {
     grid = [];
     for (let c = 0; c < COLS; c++) {
         grid[c] = [];
         for (let r = 0; r < ROWS; r++) {
-            grid[c][r] = createTile(c, r);
+            grid[c][r] = createTileNoMatch(c, r);
         }
     }
+}
+
+function createTileNoMatch(c, r) {
+    // Get colors that would create a match
+    let forbidden = [];
+
+    // Check horizontal (left 2 tiles)
+    if (c >= 2) {
+        if (grid[c - 1][r].color === grid[c - 2][r].color && grid[c - 1][r].color >= 0) {
+            forbidden.push(grid[c - 1][r].color);
+        }
+    }
+
+    // Check vertical (top 2 tiles)
+    if (r >= 2) {
+        if (grid[c][r - 1].color === grid[c][r - 2].color && grid[c][r - 1].color >= 0) {
+            forbidden.push(grid[c][r - 1].color);
+        }
+    }
+
+    // Pick a color that's not forbidden
+    let availableColors = [];
+    for (let i = 0; i < numColors; i++) {
+        if (!forbidden.includes(i)) {
+            availableColors.push(i);
+        }
+    }
+
+    let color = availableColors[Math.floor(Math.random() * availableColors.length)];
+
+    return {
+        c, r,
+        x: c * TILE_SIZE,
+        y: r * TILE_SIZE,
+        targetX: c * TILE_SIZE,
+        targetY: r * TILE_SIZE,
+        color: color,
+        type: TYPE_NORMAL,
+        obstacle: OBS_NONE,
+        wallHealth: 0,
+        scale: 1,
+        targetScale: 1,
+        isMatched: false
+    };
 }
 
 function placeObstacles() {
     // Place ice on random tiles
     let iceCount = levelIceCount;
-    while (iceCount > 0) {
+    let maxTries = 100;
+    while (iceCount > 0 && maxTries > 0) {
         let c = Math.floor(Math.random() * COLS);
         let r = Math.floor(Math.random() * ROWS);
         if (grid[c][r].obstacle === OBS_NONE) {
             grid[c][r].obstacle = OBS_ICE;
             iceCount--;
         }
+        maxTries--;
     }
 
     // Place walls on random tiles (not edges for fairness)
     let wallCount = levelWallCount;
-    while (wallCount > 0) {
+    maxTries = 100;
+    while (wallCount > 0 && maxTries > 0) {
         let c = 1 + Math.floor(Math.random() * (COLS - 2));
         let r = 1 + Math.floor(Math.random() * (ROWS - 2));
         if (grid[c][r].obstacle === OBS_NONE) {
@@ -406,6 +457,7 @@ function placeObstacles() {
             grid[c][r].color = -1; // No color for walls
             wallCount--;
         }
+        maxTries--;
     }
 }
 
