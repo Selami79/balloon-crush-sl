@@ -1,5 +1,5 @@
-// BALLOON CRUSH - LEVEL SYSTEM ENGINE v4.0
-// Full Candy Crush Style: Levels, Stars, Progression
+// BALLOON CRUSH - ULTIMATE ENGINE v5.0
+// Obstacles: Walls, Ice, Chains + Level System
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -18,21 +18,22 @@ const levelFailedPopup = document.getElementById('level-failed');
 
 // === LEVEL CONFIGURATION ===
 const LEVELS = [
-    { target: 500, moves: 25, colors: 4, rows: 8, cols: 8 },   // Level 1
-    { target: 800, moves: 22, colors: 4, rows: 8, cols: 8 },   // Level 2
-    { target: 1200, moves: 20, colors: 5, rows: 8, cols: 8 },   // Level 3
-    { target: 1500, moves: 20, colors: 5, rows: 8, cols: 8 },   // Level 4
-    { target: 2000, moves: 18, colors: 5, rows: 8, cols: 8 },   // Level 5
-    { target: 2500, moves: 18, colors: 6, rows: 8, cols: 8 },   // Level 6
-    { target: 3000, moves: 16, colors: 6, rows: 8, cols: 8 },   // Level 7
-    { target: 3500, moves: 16, colors: 6, rows: 8, cols: 8 },   // Level 8
-    { target: 4000, moves: 15, colors: 6, rows: 8, cols: 8 },   // Level 9
-    { target: 5000, moves: 15, colors: 6, rows: 8, cols: 8 },   // Level 10
-    { target: 6000, moves: 14, colors: 6, rows: 8, cols: 8 },   // Level 11+
+    { target: 500, moves: 25, colors: 4, ice: 0, walls: 0 },   // L1 - Tutorial
+    { target: 800, moves: 22, colors: 4, ice: 5, walls: 0 },   // L2 - Ice intro
+    { target: 1200, moves: 20, colors: 5, ice: 8, walls: 0 },   // L3
+    { target: 1500, moves: 20, colors: 5, ice: 5, walls: 3 },   // L4 - Walls intro
+    { target: 2000, moves: 18, colors: 5, ice: 8, walls: 5 },   // L5
+    { target: 2500, moves: 18, colors: 6, ice: 10, walls: 6 },  // L6
+    { target: 3000, moves: 16, colors: 6, ice: 12, walls: 8 },  // L7
+    { target: 3500, moves: 16, colors: 6, ice: 15, walls: 10 }, // L8
+    { target: 4000, moves: 15, colors: 6, ice: 18, walls: 12 }, // L9
+    { target: 5000, moves: 15, colors: 6, ice: 20, walls: 15 }, // L10+
 ];
 
 // === CONFIG ===
 const TILE_SIZE = 50;
+const COLS = 8;
+const ROWS = 8;
 
 const COLORS = [
     { main: '#FF4136', light: '#FF7166', dark: '#CC0000' },
@@ -43,19 +44,23 @@ const COLORS = [
     { main: '#FF851B', light: '#FFB366', dark: '#CC5C00' }
 ];
 
+// Tile Types
 const TYPE_NORMAL = 0;
 const TYPE_STRIPED_H = 1;
 const TYPE_STRIPED_V = 2;
 const TYPE_BOMB = 3;
 const TYPE_COLOR_BOMB = 4;
 
+// Obstacle Types
+const OBS_NONE = 0;
+const OBS_ICE = 1;      // 1 hit to break ice, then normal
+const OBS_WALL = 2;     // 2 hits to destroy (blocking tile)
+
 // === AUDIO ===
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
-function initAudio() {
-    if (!audioCtx) audioCtx = new AudioCtx();
-}
+function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
 
 function playSound(type) {
     if (!audioCtx) return;
@@ -71,6 +76,22 @@ function playSound(type) {
             osc.frequency.setValueAtTime(800, now);
             osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
             gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+            break;
+        case 'ice':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+            break;
+        case 'wall':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+            gain.gain.setValueAtTime(0.2, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
             osc.start(now); osc.stop(now + 0.1);
             break;
@@ -100,8 +121,7 @@ function playSound(type) {
             osc.start(now); osc.stop(now + 0.3);
             break;
         case 'win':
-            const notes = [523, 659, 784, 1047];
-            notes.forEach((freq, i) => {
+            [523, 659, 784, 1047].forEach((freq, i) => {
                 const o = audioCtx.createOscillator();
                 const g = audioCtx.createGain();
                 o.connect(g); g.connect(audioCtx.destination);
@@ -139,8 +159,7 @@ class Particle {
         this.gravity = 0.25;
     }
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx; this.y += this.vy;
         this.vy += this.gravity;
         this.life -= this.decay;
         return this.life > 0;
@@ -177,7 +196,7 @@ class FloatingText {
     }
     draw(ctx) {
         ctx.globalAlpha = this.life;
-        ctx.font = 'bold 20px Fredoka One';
+        ctx.font = 'bold 20px Fredoka One, Arial';
         ctx.textAlign = 'center';
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 3;
@@ -200,12 +219,13 @@ const HINT_DELAY = 180;
 function findHint() {
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            if (c < COLS - 1) {
+            if (grid[c][r].obstacle === OBS_WALL) continue;
+            if (c < COLS - 1 && grid[c + 1][r].obstacle !== OBS_WALL) {
                 swapTiles(c, r, c + 1, r);
                 if (findMatches().length > 0) { swapTiles(c, r, c + 1, r); return { c1: c, r1: r, c2: c + 1, r2: r }; }
                 swapTiles(c, r, c + 1, r);
             }
-            if (r < ROWS - 1) {
+            if (r < ROWS - 1 && grid[c][r + 1].obstacle !== OBS_WALL) {
                 swapTiles(c, r, c, r + 1);
                 if (findMatches().length > 0) { swapTiles(c, r, c, r + 1); return { c1: c, r1: r, c2: c, r2: r + 1 }; }
                 swapTiles(c, r, c, r + 1);
@@ -230,19 +250,20 @@ let moves = 0;
 let comboCount = 0;
 let state = 'IDLE';
 let selectedTile = null;
-
 let currentLevel = 1;
 let targetScore = 1000;
-let ROWS = 8;
-let COLS = 8;
 let numColors = 4;
+let levelIceCount = 0;
+let levelWallCount = 0;
 
-// Load progress
+canvas.width = COLS * TILE_SIZE;
+canvas.height = ROWS * TILE_SIZE;
+
+// Load/Save
 function loadProgress() {
     let saved = localStorage.getItem('balloonCrush_level');
     if (saved) currentLevel = parseInt(saved);
 }
-
 function saveProgress() {
     localStorage.setItem('balloonCrush_level', currentLevel.toString());
 }
@@ -270,8 +291,8 @@ function startLevel() {
     targetScore = cfg.target;
     moves = cfg.moves;
     numColors = cfg.colors;
-    ROWS = cfg.rows;
-    COLS = cfg.cols;
+    levelIceCount = cfg.ice || 0;
+    levelWallCount = cfg.walls || 0;
 
     score = 0;
     comboCount = 0;
@@ -281,9 +302,6 @@ function startLevel() {
     hintTimer = 0;
     particles = [];
     floatingTexts = [];
-
-    canvas.width = COLS * TILE_SIZE;
-    canvas.height = ROWS * TILE_SIZE;
 
     updateUI();
     createValidGrid();
@@ -337,6 +355,7 @@ function createValidGrid() {
     let attempts = 0;
     do {
         createGrid();
+        placeObstacles();
         attempts++;
     } while ((findMatches().length > 0 || !findHint()) && attempts < 100);
 }
@@ -351,6 +370,32 @@ function createGrid() {
     }
 }
 
+function placeObstacles() {
+    // Place ice on random tiles
+    let iceCount = levelIceCount;
+    while (iceCount > 0) {
+        let c = Math.floor(Math.random() * COLS);
+        let r = Math.floor(Math.random() * ROWS);
+        if (grid[c][r].obstacle === OBS_NONE) {
+            grid[c][r].obstacle = OBS_ICE;
+            iceCount--;
+        }
+    }
+
+    // Place walls on random tiles (not edges for fairness)
+    let wallCount = levelWallCount;
+    while (wallCount > 0) {
+        let c = 1 + Math.floor(Math.random() * (COLS - 2));
+        let r = 1 + Math.floor(Math.random() * (ROWS - 2));
+        if (grid[c][r].obstacle === OBS_NONE) {
+            grid[c][r].obstacle = OBS_WALL;
+            grid[c][r].wallHealth = 2;
+            grid[c][r].color = -1; // No color for walls
+            wallCount--;
+        }
+    }
+}
+
 function createTile(c, r, type = TYPE_NORMAL, colorIdx = null) {
     return {
         c, r,
@@ -360,6 +405,8 @@ function createTile(c, r, type = TYPE_NORMAL, colorIdx = null) {
         targetY: r * TILE_SIZE,
         color: colorIdx !== null ? colorIdx : Math.floor(Math.random() * numColors),
         type: type,
+        obstacle: OBS_NONE,
+        wallHealth: 0,
         scale: 1,
         targetScale: 1,
         isMatched: false
@@ -390,12 +437,15 @@ function handleInput(e) {
 
     if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
 
+    // Can't select walls
+    if (grid[col][row].obstacle === OBS_WALL) return;
+
     if (!selectedTile) {
         selectedTile = { c: col, r: row };
         playSound('swap');
     } else {
         let d = Math.abs(col - selectedTile.c) + Math.abs(row - selectedTile.r);
-        if (d === 1) {
+        if (d === 1 && grid[col][row].obstacle !== OBS_WALL) {
             attemptSwap(selectedTile, { c: col, r: row });
             selectedTile = null;
         } else {
@@ -450,7 +500,7 @@ function triggerColorBomb(bomb, targetColor) {
     let toDestroy = [bomb];
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            if (grid[c][r].color === targetColor) {
+            if (grid[c][r].color === targetColor && grid[c][r].obstacle !== OBS_WALL) {
                 toDestroy.push(grid[c][r]);
             }
         }
@@ -464,7 +514,16 @@ function destroyTiles(tiles) {
     updateUI();
 
     tiles.forEach(t => {
-        if (!t) return;
+        if (!t || t.obstacle === OBS_WALL) return;
+
+        // Handle ice first
+        if (t.obstacle === OBS_ICE) {
+            t.obstacle = OBS_NONE;
+            playSound('ice');
+            spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, '#88DDFF', 5);
+            return; // Ice broken, don't destroy tile yet
+        }
+
         t.isMatched = true;
         t.targetScale = 0;
         spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color % COLORS.length].main, 8);
@@ -483,11 +542,16 @@ function findMatches() {
     for (let r = 0; r < ROWS; r++) {
         let streak = 1;
         for (let c = 1; c <= COLS; c++) {
-            if (c < COLS && grid[c][r].color === grid[c - 1][r].color) {
+            let curr = c < COLS ? grid[c][r] : null;
+            let prev = grid[c - 1][r];
+            if (curr && prev.color >= 0 && curr.color === prev.color &&
+                prev.obstacle !== OBS_WALL && curr.obstacle !== OBS_WALL) {
                 streak++;
             } else {
                 if (streak >= 3) {
-                    for (let i = c - streak; i < c; i++) matched.add(grid[i][r]);
+                    for (let i = c - streak; i < c; i++) {
+                        if (grid[i][r].obstacle !== OBS_WALL) matched.add(grid[i][r]);
+                    }
                 }
                 streak = 1;
             }
@@ -497,11 +561,16 @@ function findMatches() {
     for (let c = 0; c < COLS; c++) {
         let streak = 1;
         for (let r = 1; r <= ROWS; r++) {
-            if (r < ROWS && grid[c][r].color === grid[c][r - 1].color) {
+            let curr = r < ROWS ? grid[c][r] : null;
+            let prev = grid[c][r - 1];
+            if (curr && prev.color >= 0 && curr.color === prev.color &&
+                prev.obstacle !== OBS_WALL && curr.obstacle !== OBS_WALL) {
                 streak++;
             } else {
                 if (streak >= 3) {
-                    for (let i = r - streak; i < r; i++) matched.add(grid[c][i]);
+                    for (let i = r - streak; i < r; i++) {
+                        if (grid[c][i].obstacle !== OBS_WALL) matched.add(grid[c][i]);
+                    }
                 }
                 streak = 1;
             }
@@ -529,6 +598,10 @@ function processMatches(matches, swapPos1 = null, swapPos2 = null) {
         floatingTexts.push(new FloatingText(canvas.width / 2, 40, 'COMBO x' + comboCount + '!', '#FF0'));
     }
 
+    // Damage adjacent walls
+    damageAdjacentWalls(matches);
+
+    // Trigger specials
     matches.forEach(t => {
         if (t.type !== TYPE_NORMAL && !t.isMatched) {
             triggerSpecialEffect(t);
@@ -537,6 +610,16 @@ function processMatches(matches, swapPos1 = null, swapPos2 = null) {
 
     matches.forEach(t => {
         if (t.isMatched) return;
+
+        // Handle ice
+        if (t.obstacle === OBS_ICE) {
+            t.obstacle = OBS_NONE;
+            playSound('ice');
+            spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, '#88DDFF', 5);
+            score += 20;
+            return;
+        }
+
         t.isMatched = true;
         t.targetScale = 0;
         spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color % COLORS.length].main, 6);
@@ -546,6 +629,35 @@ function processMatches(matches, swapPos1 = null, swapPos2 = null) {
     floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height / 2, '+' + points));
 
     setTimeout(() => applyGravity(specialCreated), 150);
+}
+
+function damageAdjacentWalls(matches) {
+    let damaged = new Set();
+
+    matches.forEach(t => {
+        // Check 4 neighbors
+        [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dc, dr]) => {
+            let nc = t.c + dc;
+            let nr = t.r + dr;
+            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+                let neighbor = grid[nc][nr];
+                if (neighbor.obstacle === OBS_WALL && !damaged.has(neighbor)) {
+                    damaged.add(neighbor);
+                    neighbor.wallHealth--;
+                    playSound('wall');
+                    shake(3);
+
+                    if (neighbor.wallHealth <= 0) {
+                        neighbor.isMatched = true;
+                        neighbor.targetScale = 0;
+                        neighbor.obstacle = OBS_NONE;
+                        spawnParticles(neighbor.x + TILE_SIZE / 2, neighbor.y + TILE_SIZE / 2, '#8B4513', 10);
+                        score += 50;
+                    }
+                }
+            }
+        });
+    });
 }
 
 function checkForSpecialCreation(matches, pos1, pos2) {
@@ -599,15 +711,25 @@ function triggerSpecialEffect(tile) {
     let toDestroy = [];
 
     if (tile.type === TYPE_STRIPED_H) {
-        for (let i = 0; i < COLS; i++) if (!grid[i][tile.r].isMatched) toDestroy.push(grid[i][tile.r]);
+        for (let i = 0; i < COLS; i++) {
+            if (!grid[i][tile.r].isMatched && grid[i][tile.r].obstacle !== OBS_WALL) {
+                toDestroy.push(grid[i][tile.r]);
+            }
+        }
     } else if (tile.type === TYPE_STRIPED_V) {
-        for (let i = 0; i < ROWS; i++) if (!grid[tile.c][i].isMatched) toDestroy.push(grid[tile.c][i]);
+        for (let i = 0; i < ROWS; i++) {
+            if (!grid[tile.c][i].isMatched && grid[tile.c][i].obstacle !== OBS_WALL) {
+                toDestroy.push(grid[tile.c][i]);
+            }
+        }
     } else if (tile.type === TYPE_BOMB) {
         for (let dc = -1; dc <= 1; dc++) {
             for (let dr = -1; dr <= 1; dr++) {
                 let nc = tile.c + dc, nr = tile.r + dr;
-                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !grid[nc][nr].isMatched) {
-                    toDestroy.push(grid[nc][nr]);
+                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+                    if (!grid[nc][nr].isMatched && grid[nc][nr].obstacle !== OBS_WALL) {
+                        toDestroy.push(grid[nc][nr]);
+                    }
                 }
             }
         }
@@ -617,6 +739,11 @@ function triggerSpecialEffect(tile) {
         playSound('special');
         shake(8);
         toDestroy.forEach(t => {
+            if (t.obstacle === OBS_ICE) {
+                t.obstacle = OBS_NONE;
+                spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, '#88DDFF', 5);
+                return;
+            }
             t.isMatched = true;
             t.targetScale = 0;
             spawnParticles(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 2, COLORS[t.color % COLORS.length].main, 5);
@@ -632,6 +759,9 @@ function applyGravity(specialCreated = null) {
         for (let r = ROWS - 1; r >= 0; r--) {
             if (grid[c][r].isMatched) {
                 shift++;
+            } else if (grid[c][r].obstacle === OBS_WALL) {
+                // Walls don't fall, reset shift
+                shift = 0;
             } else if (shift > 0) {
                 grid[c][r + shift] = grid[c][r];
                 grid[c][r + shift].r = r + shift;
@@ -644,6 +774,15 @@ function applyGravity(specialCreated = null) {
             grid[c][r] = createTile(c, r);
             grid[c][r].y = -TILE_SIZE * (shift - r);
             grid[c][r].targetY = r * TILE_SIZE;
+        }
+    }
+
+    // Fill any nulls
+    for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+            if (!grid[c][r]) {
+                grid[c][r] = createTile(c, r);
+            }
         }
     }
 
@@ -674,7 +813,9 @@ function shuffleGrid() {
         let tiles = [];
         for (let c = 0; c < COLS; c++) {
             for (let r = 0; r < ROWS; r++) {
-                tiles.push({ color: grid[c][r].color, type: grid[c][r].type });
+                if (grid[c][r].obstacle !== OBS_WALL) {
+                    tiles.push({ color: grid[c][r].color, type: grid[c][r].type, obstacle: grid[c][r].obstacle });
+                }
             }
         }
 
@@ -686,9 +827,12 @@ function shuffleGrid() {
         let idx = 0;
         for (let c = 0; c < COLS; c++) {
             for (let r = 0; r < ROWS; r++) {
-                grid[c][r].color = tiles[idx].color;
-                grid[c][r].type = tiles[idx].type;
-                idx++;
+                if (grid[c][r].obstacle !== OBS_WALL) {
+                    grid[c][r].color = tiles[idx].color;
+                    grid[c][r].type = tiles[idx].type;
+                    grid[c][r].obstacle = tiles[idx].obstacle;
+                    idx++;
+                }
             }
         }
 
@@ -778,6 +922,7 @@ function render() {
 
     ctx.clearRect(-10, -10, canvas.width + 20, canvas.height + 20);
 
+    // Grid background
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
             ctx.fillStyle = (c + r) % 2 === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
@@ -785,6 +930,7 @@ function render() {
         }
     }
 
+    // Hint
     if (hintTile && state === 'IDLE') {
         let pulse = Math.sin(Date.now() / 150) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(255,255,0,${pulse * 0.4})`;
@@ -792,6 +938,7 @@ function render() {
         ctx.fillRect(hintTile.c2 * TILE_SIZE, hintTile.r2 * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
+    // Tiles
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
             let t = grid[c][r];
@@ -812,8 +959,41 @@ function drawTile(t) {
 
     if (size < 1) return;
 
+    // === WALL ===
+    if (t.obstacle === OBS_WALL) {
+        // Draw brick wall
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(t.x + 4, t.y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+
+        // Brick pattern
+        ctx.strokeStyle = '#5D3A1A';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(t.x + 4, t.y + TILE_SIZE / 3);
+        ctx.lineTo(t.x + TILE_SIZE - 4, t.y + TILE_SIZE / 3);
+        ctx.moveTo(t.x + 4, t.y + TILE_SIZE * 2 / 3);
+        ctx.lineTo(t.x + TILE_SIZE - 4, t.y + TILE_SIZE * 2 / 3);
+        ctx.moveTo(t.x + TILE_SIZE / 2, t.y + 4);
+        ctx.lineTo(t.x + TILE_SIZE / 2, t.y + TILE_SIZE / 3);
+        ctx.moveTo(t.x + TILE_SIZE / 4, t.y + TILE_SIZE / 3);
+        ctx.lineTo(t.x + TILE_SIZE / 4, t.y + TILE_SIZE * 2 / 3);
+        ctx.moveTo(t.x + TILE_SIZE * 3 / 4, t.y + TILE_SIZE / 3);
+        ctx.lineTo(t.x + TILE_SIZE * 3 / 4, t.y + TILE_SIZE * 2 / 3);
+        ctx.moveTo(t.x + TILE_SIZE / 2, t.y + TILE_SIZE * 2 / 3);
+        ctx.lineTo(t.x + TILE_SIZE / 2, t.y + TILE_SIZE - 4);
+        ctx.stroke();
+
+        // Health indicator
+        if (t.wallHealth === 1) {
+            ctx.fillStyle = 'rgba(255,0,0,0.3)';
+            ctx.fillRect(t.x + 4, t.y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        }
+        return;
+    }
+
     let col = COLORS[t.color % COLORS.length];
 
+    // Selection
     if (selectedTile && selectedTile.c === t.c && selectedTile.r === t.r) {
         ctx.shadowColor = '#fff';
         ctx.shadowBlur = 20;
@@ -824,11 +1004,13 @@ function drawTile(t) {
         ctx.shadowBlur = 0;
     }
 
+    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.beginPath();
     ctx.ellipse(cx + 3, cy + 5, size * 0.9, size * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Balloon gradient
     let grad = ctx.createRadialGradient(cx - size * 0.3, cy - size * 0.3, 0, cx, cy, size * 1.2);
     grad.addColorStop(0, col.light);
     grad.addColorStop(0.5, col.main);
@@ -838,6 +1020,25 @@ function drawTile(t) {
     ctx.beginPath();
     ctx.ellipse(cx, cy - 2, size, size * 1.15, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // === ICE OVERLAY ===
+    if (t.obstacle === OBS_ICE) {
+        ctx.fillStyle = 'rgba(135, 206, 250, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 2, size + 3, size * 1.15 + 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ice cracks
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - size * 0.5, cy - size * 0.3);
+        ctx.lineTo(cx, cy);
+        ctx.lineTo(cx + size * 0.3, cy - size * 0.5);
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + size * 0.2, cy + size * 0.4);
+        ctx.stroke();
+    }
 
     // Special indicators
     if (t.type === TYPE_STRIPED_H) {
@@ -859,12 +1060,6 @@ function drawTile(t) {
         ctx.beginPath();
         ctx.arc(cx, cy, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = col.dark;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(cx - size * 0.15, cy); ctx.lineTo(cx + size * 0.15, cy);
-        ctx.moveTo(cx, cy - size * 0.15); ctx.lineTo(cx, cy + size * 0.15);
-        ctx.stroke();
     } else if (t.type === TYPE_COLOR_BOMB) {
         ctx.fillStyle = '#FFF';
         ctx.beginPath();
@@ -876,11 +1071,15 @@ function drawTile(t) {
         ctx.fill();
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(cx - size * 0.3, cy - size * 0.4, size * 0.25, size * 0.15, -0.5, 0, Math.PI * 2);
-    ctx.fill();
+    // Specular
+    if (t.obstacle !== OBS_ICE) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(cx - size * 0.3, cy - size * 0.4, size * 0.25, size * 0.15, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
 
+    // Knot
     ctx.fillStyle = col.dark;
     ctx.beginPath();
     ctx.moveTo(cx, cy + size * 1.1);
@@ -889,6 +1088,7 @@ function drawTile(t) {
     ctx.closePath();
     ctx.fill();
 
+    // String
     ctx.strokeStyle = col.dark;
     ctx.lineWidth = 1;
     ctx.beginPath();
