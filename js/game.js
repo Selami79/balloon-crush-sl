@@ -839,74 +839,47 @@ function triggerSpecialEffect(tile) {
 let isProcessing = false;
 
 function applyGravity(specialCreated = null) {
-    if (isProcessing) return;
-    isProcessing = true;
     state = 'GRAVITY';
 
-    // Step 1: Physical Gravity - Iterative falling
-    let moved = true;
-    let attempts = 0;
-
-    while (moved && attempts < 20) {
-        moved = false;
-        attempts++;
-
-        for (let c = 0; c < COLS; c++) {
-            for (let r = ROWS - 1; r >= 0; r--) {
-                let tile = grid[c][r];
-
-                // If this cell is empty/matched
-                if (tile.isMatched || tile.obstacle === OBS_WALL) continue;
-
-                // We only care about empty spaces (matched tiles)
-                // Let's find matches and fill them
-            }
-        }
-    }
-
-    // Step 2: Reliable Column Rebuild (The "Safe" Way)
     for (let c = 0; c < COLS; c++) {
-        let aliveTiles = [];
-        let wallMap = {}; // row -> tile
-
-        for (let r = 0; r < ROWS; r++) {
-            let t = grid[c][r];
-            if (t.obstacle === OBS_WALL && !t.isMatched) {
-                wallMap[r] = t;
-            } else if (!t.isMatched) {
-                aliveTiles.push(t);
-            }
-        }
-
-        let tileIdx = aliveTiles.length - 1;
+        // 1. Move existing balloons down, skipping walls
         for (let r = ROWS - 1; r >= 0; r--) {
-            if (wallMap[r]) {
-                grid[c][r] = wallMap[r];
-            } else if (tileIdx >= 0) {
-                let t = aliveTiles[tileIdx];
-                grid[c][r] = t;
-                t.c = c; t.r = r;
-                t.targetX = c * TILE_SIZE;
-                t.targetY = r * TILE_SIZE;
-                t.isMatched = false;
-                t.targetScale = 1;
-                tileIdx--;
-            } else {
-                // Gap that must be filled
-                grid[c][r] = createNewTile(c, r);
-                grid[c][r].y = -TILE_SIZE * (Math.abs(tileIdx) + 2);
-                tileIdx--;
+            if (grid[c][r].isMatched && grid[c][r].obstacle !== OBS_WALL) {
+                // Find a balloon above this empty spot
+                for (let rAbove = r - 1; rAbove >= 0; rAbove--) {
+                    if (grid[c][rAbove].obstacle === OBS_WALL) break; // Blocked by wall
+
+                    if (!grid[c][rAbove].isMatched) {
+                        // Swap
+                        let temp = grid[c][r];
+                        grid[c][r] = grid[c][rAbove];
+                        grid[c][rAbove] = temp;
+
+                        // Update target positions
+                        grid[c][r].r = r;
+                        grid[c][r].targetY = r * TILE_SIZE;
+                        grid[c][rAbove].r = rAbove;
+                        grid[c][rAbove].targetY = rAbove * TILE_SIZE;
+                        break;
+                    }
+                }
             }
         }
     }
 
-    // Step 3: ABSOLUTE INTEGRITY CHECK
-    // If anything is still null or matched, force-fix it
+    // 2. Self-Healing: Fill all remaining matches with brand new balloons
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            if (!grid[c][r] || grid[c][r].isMatched) {
-                grid[c][r] = createNewTile(c, r);
+            if (grid[c][r].isMatched && grid[c][r].obstacle !== OBS_WALL) {
+                let color = Math.floor(Math.random() * numColors);
+                grid[c][r].color = color;
                 grid[c][r].isMatched = false;
+                grid[c][r].type = TYPE_NORMAL;
+                grid[c][r].obstacle = OBS_NONE;
+                grid[c][r].y = -TILE_SIZE; // Start from top
+                grid[c][r].targetY = r * TILE_SIZE;
+                grid[c][r].targetScale = 1;
+                grid[c][r].scale = 0; // Animation pop-in
             }
         }
     }
@@ -920,7 +893,6 @@ function applyGravity(specialCreated = null) {
     }
 
     setTimeout(() => {
-        isProcessing = false;
         let nextMatches = findMatches();
         if (nextMatches.length > 0) {
             processMatches(nextMatches);
@@ -932,7 +904,7 @@ function applyGravity(specialCreated = null) {
                 checkLevelStatus();
             }
         }
-    }, 450);
+    }, 500);
 }
 
 function shuffleGrid() {
