@@ -4,311 +4,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Balloon Crush</title>
-    <!-- Google Font with fallback -->
+    <title>Balloon Crush PRO</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Fredoka One', cursive;
-            overflow: hidden;
-            touch-action: none;
+            background: #2c3e50;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100vw;
             height: 100vh;
+            overflow: hidden;
+            font-family: 'Fredoka One', cursive;
         }
 
         #game-container {
-            position: relative;
-            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
             border-radius: 15px;
-            padding: 10px;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            width: 95vw;
-            max-width: 500px;
-            height: auto;
-        }
-
-        canvas {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            display: block;
-            width: 100%;
-            height: auto;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-        }
-
-        .stat-box {
-            text-align: center;
-            color: white;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            opacity: 0.8;
-            text-transform: uppercase;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
-        }
-
-        .level-badge {
-            background: linear-gradient(45deg, #f093fb, #f5576c);
-            padding: 8px 20px;
-            border-radius: 20px;
-            color: white;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            margin: 10px 0;
             overflow: hidden;
+            border: 4px solid #34495e;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00c6ff, #0072ff);
-            border-radius: 10px;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
-        }
-
-        .target-info {
-            text-align: center;
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            pointer-events: none;
+            width: 100%;
+            display: flex;
+            justify-content: center;
             color: white;
-            font-size: 14px;
-            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
-        /* Overlays */
-        .overlay {
+        .loading-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 100;
-        }
-
-        .popup {
-            background: linear-gradient(180deg, #fff 0%, #f0f0f0 100%);
-            padding: 40px;
-            border-radius: 30px;
-            text-align: center;
-            max-width: 350px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: popIn 0.4s ease;
-        }
-
-        @keyframes popIn {
-            0% {
-                transform: scale(0.5);
-                opacity: 0;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .popup h1 {
-            margin: 0 0 10px 0;
-            font-size: 32px;
-            background: linear-gradient(45deg, #f093fb, #f5576c);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .popup h2 {
-            color: #333;
-            margin: 0 0 20px 0;
-        }
-
-        .stars {
-            font-size: 50px;
-            margin: 20px 0;
-        }
-
-        .star {
-            color: #ddd;
-            text-shadow: none;
-            transition: all 0.3s;
-        }
-
-        .star.active {
-            color: #FFD700;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            border: none;
-            padding: 18px 45px;
             color: white;
-            font-size: 20px;
-            font-family: 'Fredoka One', cursive;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 8px 0 #4a3f7a, 0 15px 30px rgba(0, 0, 0, 0.3);
-            transition: transform 0.1s, box-shadow 0.1s;
-            margin: 10px;
-        }
-
-        .btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 4px 0 #4a3f7a, 0 8px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn.green {
-            background: linear-gradient(45deg, #11998e, #38ef7d);
-            box-shadow: 0 8px 0 #0d7a70, 0 15px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn.green:active {
-            box-shadow: 0 4px 0 #0d7a70;
-        }
-
-        .level-goals {
-            background: rgba(0, 0, 0, 0.05);
-            padding: 15px;
-            border-radius: 15px;
-            margin: 15px 0;
-        }
-
-        .goal-row {
-            display: flex;
-            justify-content: space-between;
-            color: #555;
-            font-size: 16px;
-            margin: 8px 0;
-        }
-
-        #sl-status {
-            position: absolute;
-            bottom: -30px;
-            width: 100%;
-            text-align: center;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .score-popup {
-            color: #FFD700;
-            font-weight: bold;
-            position: absolute;
-            pointer-events: none;
+            z-index: 100;
         }
     </style>
 </head>
 
 <body>
+    <div id="game-container"></div>
 
-    <div id="game-container">
-        <div class="header">
-            <div class="stat-box">
-                <div class="stat-label">Score</div>
-                <div class="stat-value" id="score">0</div>
-            </div>
-            <div class="level-badge">LEVEL <span id="level">1</span></div>
-            <div class="stat-box">
-                <div class="stat-label">Moves</div>
-                <div class="stat-value" id="moves">20</div>
-            </div>
-        </div>
-
-        <div class="target-info">
-            🎯 Target: <span id="target-score">1000</span> pts
-        </div>
-
-        <div class="progress-bar">
-            <div class="progress-fill" id="progress" style="width: 0%"></div>
-        </div>
-
-        <canvas id="canvas" width="400" height="400"></canvas>
-
-        <div id="sl-status">GUEST PLAYER</div>
-    </div>
-
-    <!-- Level Start Popup -->
-    <div class="overlay" id="level-start">
-        <div class="popup">
-            <h1>LEVEL <span id="popup-level">1</span></h1>
-            <div class="level-goals">
-                <div class="goal-row">
-                    <span>🎯 Target Score</span>
-                    <span id="popup-target">1000</span>
-                </div>
-                <div class="goal-row">
-                    <span>👆 Moves</span>
-                    <span id="popup-moves">20</span>
-                </div>
-            </div>
-            <button class="btn green" onclick="startLevel()">PLAY!</button>
-        </div>
-    </div>
-
-    <!-- Level Complete Popup -->
-    <div class="overlay" id="level-complete">
-        <div class="popup">
-            <h1>LEVEL COMPLETE!</h1>
-            <div class="stars">
-                <span class="star" id="star1">★</span>
-                <span class="star" id="star2">★</span>
-                <span class="star" id="star3">★</span>
-            </div>
-            <h2>Score: <span id="final-score">0</span></h2>
-            <button class="btn green" onclick="nextLevel()">NEXT LEVEL</button>
-        </div>
-    </div>
-
-    <!-- Level Failed Popup -->
-    <div class="overlay" id="level-failed">
-        <div class="popup">
-            <h1
-                style="background: linear-gradient(45deg, #ff416c, #ff4b2b); -webkit-background-clip: text; background-clip: text;">
-                LEVEL
-                FAILED</h1>
-            <h2>Score: <span id="failed-score">0</span></h2>
-            <p style="color:#666">You needed <span id="needed-score">0</span> more points</p>
-            <button class="btn" onclick="retryLevel()">TRY AGAIN</button>
-        </div>
-    </div>
-
-    <script src="js/game.js?v=17"></script>
-    <script src="js/sl_bridge.js?v=17"></script>
+    <script src="js/sl_bridge.js?v=20"></script>
+    <script src="js/game.js?v=20"></script>
 </body>
 
 </html>
