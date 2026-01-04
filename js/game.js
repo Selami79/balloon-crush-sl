@@ -841,55 +841,60 @@ let isProcessing = false;
 function applyGravity(specialCreated = null) {
     state = 'GRAVITY';
 
-    for (let c = 0; c < COLS; c++) {
-        // 1. Move existing balloons down, skipping walls
-        for (let r = ROWS - 1; r >= 0; r--) {
-            if (grid[c][r].isMatched && grid[c][r].obstacle !== OBS_WALL) {
-                // Find a balloon above this empty spot
-                for (let rAbove = r - 1; rAbove >= 0; rAbove--) {
-                    if (grid[c][rAbove].obstacle === OBS_WALL) break; // Blocked by wall
+    // Step 1: Push all live balloons down one by one (Bubbling)
+    // We do this multiple times to ensure all bubbles "float" to their final bottom position
+    for (let i = 0; i < ROWS; i++) {
+        for (let c = 0; c < COLS; c++) {
+            for (let r = ROWS - 1; r > 0; r--) {
+                let current = grid[c][r];
+                let above = grid[c][r - 1];
 
-                    if (!grid[c][rAbove].isMatched) {
-                        // Swap
-                        let temp = grid[c][r];
-                        grid[c][r] = grid[c][rAbove];
-                        grid[c][rAbove] = temp;
+                // If current is empty/matched but above is a live balloon, pull it down
+                if (current.isMatched && current.obstacle !== OBS_WALL && !above.isMatched && above.obstacle !== OBS_WALL) {
+                    // Update 'above' to fall into 'current''s slot
+                    above.r = r;
+                    above.targetY = r * TILE_SIZE;
+                    above.isMatched = false;
 
-                        // Update target positions
-                        grid[c][r].r = r;
-                        grid[c][r].targetY = r * TILE_SIZE;
-                        grid[c][rAbove].r = rAbove;
-                        grid[c][rAbove].targetY = rAbove * TILE_SIZE;
-                        break;
-                    }
+                    // Update 'current' (the empty slot) to take 'above''s previous spot
+                    current.r = r - 1;
+                    current.targetY = (r - 1) * TILE_SIZE;
+                    current.isMatched = true;
+
+                    // Swap in grid
+                    grid[c][r] = above;
+                    grid[c][r - 1] = current;
                 }
             }
         }
     }
 
-    // 2. Self-Healing: Fill all remaining matches with brand new balloons
+    // Step 2: Instant Fill - Anything still 'isMatched' becomes a new balloon
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS; r++) {
-            if (grid[c][r].isMatched && grid[c][r].obstacle !== OBS_WALL) {
-                let color = Math.floor(Math.random() * numColors);
-                grid[c][r].color = color;
-                grid[c][r].isMatched = false;
-                grid[c][r].type = TYPE_NORMAL;
-                grid[c][r].obstacle = OBS_NONE;
-                grid[c][r].y = -TILE_SIZE; // Start from top
-                grid[c][r].targetY = r * TILE_SIZE;
-                grid[c][r].targetScale = 1;
-                grid[c][r].scale = 0; // Animation pop-in
+            let t = grid[c][r];
+            if (t.isMatched && t.obstacle !== OBS_WALL) {
+                // Transform the "dead" tile into a new "live" tile
+                t.color = Math.floor(Math.random() * numColors);
+                t.type = TYPE_NORMAL;
+                t.obstacle = OBS_NONE;
+                t.isMatched = false;
+                t.targetScale = 1;
+                t.scale = 0; // Animation pop-in
+                t.y = -TILE_SIZE; // Drop from top
+                t.targetY = r * TILE_SIZE;
             }
         }
     }
 
+    // Step 3: Special Creation (from matches)
     if (specialCreated && grid[specialCreated.pos.c] && grid[specialCreated.pos.c][specialCreated.pos.r]) {
         let t = grid[specialCreated.pos.c][specialCreated.pos.r];
         t.type = specialCreated.type;
         t.color = specialCreated.color;
         t.isMatched = false;
         t.targetScale = 1;
+        t.scale = 1;
     }
 
     setTimeout(() => {
@@ -905,6 +910,23 @@ function applyGravity(specialCreated = null) {
             }
         }
     }, 500);
+}
+
+// FAILSAFE: Absolute Grid Integrity Check (Runs every frame if needed)
+function ensureGridIntegrity() {
+    for (let c = 0; c < COLS; c++) {
+        if (!grid[c]) grid[c] = [];
+        for (let r = 0; r < ROWS; r++) {
+            if (!grid[c][r]) {
+                grid[c][r] = createTile(c, r);
+            }
+            // If a tile somehow stays matched while IDLE, fix it
+            if (state === 'IDLE' && grid[c][r].isMatched && grid[c][r].obstacle !== OBS_WALL) {
+                grid[c][r].isMatched = false;
+                grid[c][r].scale = 1;
+            }
+        }
+    }
 }
 
 function shuffleGrid() {
@@ -1015,6 +1037,7 @@ function update() {
 }
 
 function render() {
+    ensureGridIntegrity();
     ctx.save();
 
     if (shakeIntensity > 0.5) {
