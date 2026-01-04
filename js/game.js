@@ -754,26 +754,38 @@ function triggerSpecialEffect(tile) {
 }
 
 function applyGravity(specialCreated = null) {
+    // Process each column
     for (let c = 0; c < COLS; c++) {
-        let shift = 0;
-        for (let r = ROWS - 1; r >= 0; r--) {
-            if (grid[c][r].isMatched) {
-                shift++;
-            } else if (grid[c][r].obstacle === OBS_WALL) {
-                // Walls don't fall, reset shift
-                shift = 0;
-            } else if (shift > 0) {
-                grid[c][r + shift] = grid[c][r];
-                grid[c][r + shift].r = r + shift;
-                grid[c][r + shift].targetY = (r + shift) * TILE_SIZE;
-                grid[c][r] = null;
+        // Collect non-matched, non-wall tiles and track wall positions
+        let tiles = [];
+        let wallPositions = [];
+
+        for (let r = 0; r < ROWS; r++) {
+            if (grid[c][r].obstacle === OBS_WALL) {
+                wallPositions.push(r);
+            } else if (!grid[c][r].isMatched) {
+                tiles.push(grid[c][r]);
             }
         }
 
-        for (let r = 0; r < shift; r++) {
-            grid[c][r] = createTile(c, r);
-            grid[c][r].y = -TILE_SIZE * (shift - r);
-            grid[c][r].targetY = r * TILE_SIZE;
+        // Rebuild column from bottom to top
+        let tileIdx = tiles.length - 1;
+        for (let r = ROWS - 1; r >= 0; r--) {
+            if (wallPositions.includes(r)) {
+                // Keep wall in place
+                continue;
+            } else if (tileIdx >= 0) {
+                // Place existing tile
+                grid[c][r] = tiles[tileIdx];
+                grid[c][r].r = r;
+                grid[c][r].targetY = r * TILE_SIZE;
+                tileIdx--;
+            } else {
+                // Create new tile for empty spot
+                grid[c][r] = createTile(c, r);
+                grid[c][r].y = -TILE_SIZE * (r + 1); // Start above screen
+                grid[c][r].targetY = r * TILE_SIZE;
+            }
         }
     }
 
