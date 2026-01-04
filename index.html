@@ -22,23 +22,29 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
         }
 
         #game-container {
             position: relative;
             background: rgba(255, 255, 255, 0.15);
-            border-radius: 25px;
-            padding: 15px;
+            border-radius: 15px;
+            padding: 10px;
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.2);
+            width: 95vw;
+            max-width: 500px;
+            height: auto;
         }
 
         canvas {
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
+            border-radius: 10px;
             display: block;
+            width: 100%;
+            height: auto;
         }
 
         .header {
@@ -297,8 +303,8 @@
         </div>
     </div>
 
-    <script src="js/game.js?v=7"></script>
-    <script src="js/sl_bridge.js?v=7"></script>
+    <script src="js/game.js?v=8"></script>
+    <script src="js/sl_bridge.js?v=8"></script>
 </body>
 
 </html>
