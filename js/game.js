@@ -1,5 +1,5 @@
-// BALOON CRUSH - GAME LOGIC
-// Simple Match-3 Engine
+// BALOON CRUSH - ADVANCED STRATEGY ENGINE
+// Features: Gravity, Chain Reactions, Special Balloons (Striped/Bomb)
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -8,163 +8,176 @@ const movesEl = document.getElementById('moves');
 const gameOverEl = document.getElementById('game-over');
 const finalScoreEl = document.getElementById('final-score');
 
-// Game Config
+// Config
 const COLS = 8;
 const ROWS = 8;
 const TILE_SIZE = 50;
-const OFFSET_X = 0;
-const OFFSET_Y = 0; // Adjust if needed
-const ANIMATION_SPEED = 10;
+const ANIM_SPEED = 0.2; // 0.0 to 1.0
 
-// Colors for Balloons (Red, Blue, Green, Yellow, Purple, Orange)
+// Colors: Red, Blue, Green, Yellow, Purple, Orange
 const COLORS = ['#FF4136', '#0074D9', '#2ECC40', '#FFDC00', '#B10DC9', '#FF851B'];
 
-let grid = [];
+// Tile Types
+const TYPE_NORMAL = 0;
+const TYPE_STRIPED_H = 1; // Destroys Row
+const TYPE_STRIPED_V = 2; // Destroys Col
+const TYPE_BOMB = 3;      // Destroys Area or Color
+
+// State
+let grid = []; // 2D Array
 let score = 0;
-let moves = 20;
+let moves = 30;
+let state = 'IDLE'; // IDLE, ANIMATING, GAME_OVER
 let selectedTile = null;
-let isAnimating = false;
+
+// Animation Queue
 let animations = [];
 
 // Initialize
 canvas.width = COLS * TILE_SIZE;
 canvas.height = ROWS * TILE_SIZE;
 
+function initDisplay() {
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+    canvas.style.aspectRatio = `${COLS}/${ROWS}`;
+}
+initDisplay();
+
+// --- CORE LOGIC ---
+
 function startGame() {
     score = 0;
-    moves = 20;
-    scoreEl.innerText = score;
-    movesEl.innerText = moves;
+    moves = 30;
+    state = 'IDLE';
+    selectedTile = null;
+    updateUI();
     gameOverEl.style.display = 'none';
-    isAnimating = false;
 
-    initGrid();
+    // Create Grid without initial matches
+    do {
+        createGrid();
+    } while (findMatches().length > 0);
+
     draw();
 }
 
-function initGrid() {
+function createGrid() {
     grid = [];
     for (let c = 0; c < COLS; c++) {
         grid[c] = [];
         for (let r = 0; r < ROWS; r++) {
-            grid[c][r] = {
-                x: c * TILE_SIZE,
-                y: r * TILE_SIZE,
-                color: getRandomColor(),
-                type: 'normal',
-                match: 0,
-                alpha: 1,
-                offsetY: 0
-            };
+            grid[c][r] = createTile(c, r);
         }
     }
-    // Remove initial matches
-    resolveMatches(true);
 }
 
-function getRandomColor() {
-    return COLORS[Math.floor(Math.random() * COLORS.length)];
+function createTile(c, r, type = TYPE_NORMAL, matchColor = null) {
+    return {
+        c: c, r: r,
+        x: c * TILE_SIZE, y: r * TILE_SIZE, // Visual Pos
+        targetX: c * TILE_SIZE, targetY: r * TILE_SIZE,
+        color: matchColor !== null ? matchColor : Math.floor(Math.random() * COLORS.length),
+        type: type,
+        alpha: 1, // For pop animation
+        scale: 1,
+        isMatched: false
+    };
 }
 
-// Drawing
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// --- INTERACTION ---
 
-    for (let c = 0; c < COLS; c++) {
-        for (let r = 0; r < ROWS; r++) {
-            let tile = grid[c][r];
-            if (!tile) continue;
+canvas.addEventListener('mousedown', handleInput);
+canvas.addEventListener('touchstart', handleInput, { passive: false });
 
-            let x = tile.x;
-            let y = tile.y + tile.offsetY; // For animation
+function handleInput(e) {
+    if (state !== 'IDLE' || moves <= 0) return;
+    e.preventDefault();
 
-            if (tile.match > 0) {
-                // Popping animation (shrink)
-                drawBalloon(x, y, tile.color, tile.alpha);
-            } else {
-                drawBalloon(x, y, tile.color, 1);
-            }
+    let rect = canvas.getBoundingClientRect();
+    let cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    let cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
 
-            // Highlight selected
-            if (selectedTile && selectedTile.c === c && selectedTile.r === r) {
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.rect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                ctx.stroke();
-            }
-        }
-    }
+    // Canvas Scale Correction
+    let scaleX = canvas.width / rect.width;
+    let scaleY = canvas.height / rect.height;
 
-    if (isAnimating) {
-        requestAnimationFrame(updateAnimations);
-    }
-}
+    let col = Math.floor((cx * scaleX) / TILE_SIZE);
+    let row = Math.floor((cy * scaleY) / TILE_SIZE);
 
-function drawBalloon(x, y, color, scale) {
-    let cx = x + TILE_SIZE / 2;
-    let cy = y + TILE_SIZE / 2;
-    let r = (TILE_SIZE / 2 - 4) * scale;
+    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
 
-    if (r <= 0) return;
-
-    // Balloon Body
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy - 2, r, r * 1.1, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Shine (Reflection)
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(cx - r / 3, cy - r / 3, r / 4, r / 6, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Knot
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + r * 1.05);
-    ctx.lineTo(cx - 3, cy + r * 1.25);
-    ctx.lineTo(cx + 3, cy + r * 1.25);
-    ctx.fill();
-}
-
-
-// Logic
-function resolveMatches(silent = false) {
-    let matches = findMatches();
-    if (matches.length > 0) {
-        if (!silent) isAnimating = true;
-
-        // Mark matches
-        matches.forEach(m => {
-            grid[m.c][m.r].match = 1; // Start pop animation
-            if (!silent) score += 10;
-        });
-
-        scoreEl.innerText = score;
-
-        if (silent) {
-            removeMatchesAndFall();
-            resolveMatches(true); // Recursively clear
+    if (!selectedTile) {
+        selectedTile = { c: col, r: row };
+    } else {
+        // Check adjacency
+        let d = Math.abs(col - selectedTile.c) + Math.abs(row - selectedTile.r);
+        if (d === 1) {
+            // Swap
+            attemptSwap(selectedTile, { c: col, r: row });
+            selectedTile = null;
         } else {
-            // Start Animation Loop if not silent
-            draw();
+            selectedTile = { c: col, r: row }; // Select new
         }
-        return true;
     }
-    return false;
+    draw();
 }
+
+function attemptSwap(t1, t2) {
+    state = 'ANIMATING';
+
+    // Logic Swap
+    let temp = grid[t1.c][t1.r];
+    grid[t1.c][t1.r] = grid[t2.c][t2.r];
+    grid[t2.c][t2.r] = temp;
+
+    // Update Coordinates inside objects
+    grid[t1.c][t1.r].c = t1.c; grid[t1.c][t1.r].r = t1.r;
+    grid[t2.c][t2.r].c = t2.c; grid[t2.c][t2.r].r = t2.r;
+
+    // Update Target Visuals
+    updateTargets();
+
+    // Check Matches
+    let matches = findMatches();
+
+    // Animate Swap
+    animate(() => {
+        if (matches.length > 0) {
+            moves--;
+            updateUI();
+            handleMatches(matches); // Process matches
+        } else {
+            // Swap Back (Invalid Move)
+            let tempBack = grid[t1.c][t1.r];
+            grid[t1.c][t1.r] = grid[t2.c][t2.r];
+            grid[t2.c][t2.r] = tempBack;
+
+            grid[t1.c][t1.r].c = t1.c; grid[t1.c][t1.r].r = t1.r;
+            grid[t2.c][t2.r].c = t2.c; grid[t2.c][t2.r].r = t2.r;
+
+            updateTargets();
+            animate(() => {
+                state = 'IDLE';
+                draw();
+            });
+        }
+    });
+}
+
+// --- MATCH LOGIC (STRATEGY) ---
 
 function findMatches() {
-    let matches = [];
+    let matchedSet = new Set();
 
     // Horizontal
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS - 2; c++) {
-            let color = grid[c][r].color;
-            if (grid[c + 1][r].color === color && grid[c + 2][r].color === color) {
-                matches.push({ c: c, r: r }, { c: c + 1, r: r }, { c: c + 2, r: r });
+            let tile = grid[c][r];
+            if (grid[c + 1][r].color === tile.color && grid[c + 2][r].color === tile.color) {
+                matchedSet.add(grid[c][r]);
+                matchedSet.add(grid[c + 1][r]);
+                matchedSet.add(grid[c + 2][r]);
             }
         }
     }
@@ -172,145 +185,196 @@ function findMatches() {
     // Vertical
     for (let c = 0; c < COLS; c++) {
         for (let r = 0; r < ROWS - 2; r++) {
-            let color = grid[c][r].color;
-            if (grid[c][r + 1].color === color && grid[c][r + 2].color === color) {
-                matches.push({ c: c, r: r }, { c: c, r: r + 1 }, { c: c, r: r + 2 });
-            }
-        }
-    }
-    // Remove duplicates
-    return matches.filter((v, i, a) => a.findIndex(t => (t.c === v.c && t.r === v.r)) === i);
-}
-
-function updateAnimations() {
-    let needsRedraw = false;
-    let animationComplete = true;
-
-    // 1. Pop Animation
-    for (let c = 0; c < COLS; c++) {
-        for (let r = 0; r < ROWS; r++) {
-            if (grid[c][r].match > 0) {
-                grid[c][r].alpha -= 0.1;
-                if (grid[c][r].alpha <= 0) {
-                    grid[c][r].color = null; // Removed
-                } else {
-                    animationComplete = false;
-                }
-                needsRedraw = true;
+            let tile = grid[c][r];
+            if (grid[c][r + 1].color === tile.color && grid[c][r + 2].color === tile.color) {
+                matchedSet.add(grid[c][r]);
+                matchedSet.add(grid[c][r + 1]);
+                matchedSet.add(grid[c][r + 2]);
             }
         }
     }
 
-    if (animationComplete && needsRedraw) {
-        removeMatchesAndFall();
-        // Check new matches after fall
-        setTimeout(() => {
-            if (!resolveMatches()) {
-                isAnimating = false;
-                checkGameOver();
-            }
-        }, 200);
-        return;
-    }
-
-    draw();
-    if (!animationComplete) requestAnimationFrame(updateAnimations);
+    // Convert logic for Special Creation could happen here
+    // For now, simple return array
+    return Array.from(matchedSet);
 }
 
-function removeMatchesAndFall() {
+
+function handleMatches(matches) {
+    // 1. Mark Matches & Score
+    score += matches.length * 10;
+    updateUI();
+
+    // Trigger Special Effects (Recursive Bomb Logic could go here)
+
+    // 2. Animate Popping
+    matches.forEach(t => {
+        t.isMatched = true;
+        t.scale = 0;
+        t.alpha = 0;
+    });
+
+    animate(() => {
+        // 3. Remove & Shift Down
+        applyGravity();
+    });
+}
+
+function applyGravity() {
+    // Shift logic
     for (let c = 0; c < COLS; c++) {
         let shift = 0;
         for (let r = ROWS - 1; r >= 0; r--) {
-            if (grid[c][r].color === null || grid[c][r].match > 0) {
+            if (grid[c][r].isMatched) {
                 shift++;
             } else if (shift > 0) {
+                // Move tile down
                 grid[c][r + shift] = grid[c][r];
-                grid[c][r + shift].y = (r + shift) * TILE_SIZE; // Reset position
-                grid[c][r + shift].match = 0;
+                grid[c][r + shift].r += shift;
+                grid[c][r + shift].targetY = (r + shift) * TILE_SIZE; // New target
+                grid[c][r] = null; // Mark old spot empty temporarily
             }
         }
-        // Fill top
+
+        // Fill top empty spots
         for (let r = 0; r < shift; r++) {
-            grid[c][r] = {
-                x: c * TILE_SIZE,
-                y: r * TILE_SIZE,
-                color: getRandomColor(),
-                type: 'normal',
-                match: 0,
-                alpha: 1,
-                offsetY: -TILE_SIZE * shift // For drop animation later
-            };
+            grid[c][r] = createTile(c, r);
+            grid[c][r].y = -TILE_SIZE * (shift - r); // Start above screen
+            grid[c][r].targetY = r * TILE_SIZE;
         }
     }
-}
 
-
-function swap(c1, r1, c2, r2) {
-    let temp = grid[c1][r1].color;
-    grid[c1][r1].color = grid[c2][r2].color;
-    grid[c2][r2].color = temp;
-}
-
-// Input Handling
-canvas.addEventListener('mousedown', handleInput);
-canvas.addEventListener('touchstart', handleInput, { passive: false });
-
-function handleInput(e) {
-    if (isAnimating || moves <= 0) return;
-
-    e.preventDefault();
-    let rect = canvas.getBoundingClientRect();
-    let x, y;
-
-    if (e.type === 'touchstart') {
-        x = e.touches[0].clientX - rect.left;
-        y = e.touches[0].clientY - rect.top;
-    } else {
-        x = e.clientX - rect.left;
-        y = e.clientY - rect.top;
-    }
-
-    // Scale for canvas resolution
-    x = x * (canvas.width / rect.width);
-    y = y * (canvas.height / rect.height);
-
-    let c = Math.floor(x / TILE_SIZE);
-    let r = Math.floor(y / TILE_SIZE);
-
-    if (c >= 0 && c < COLS && r >= 0 && r < ROWS) {
-        if (!selectedTile) {
-            selectedTile = { c: c, r: r };
-            draw();
+    // After gravity, check chain reactions
+    animate(() => {
+        let newMatches = findMatches();
+        if (newMatches.length > 0) {
+            score += 50; // Bonus for combo
+            handleMatches(newMatches); // Recursion
         } else {
-            let dist = Math.abs(c - selectedTile.c) + Math.abs(r - selectedTile.r);
-            if (dist === 1) {
-                // Try Swap
-                swap(c, r, selectedTile.c, selectedTile.r);
-                if (findMatches().length > 0) {
-                    moves--;
-                    movesEl.innerText = moves;
-                    selectedTile = null;
-                    resolveMatches();
-                } else {
-                    // Invalid move, swap back
-                    swap(c, r, selectedTile.c, selectedTile.r);
-                    selectedTile = null;
-                    draw();
-                }
-            } else {
-                selectedTile = { c: c, r: r }; // Reselect
-                draw();
-            }
+            state = 'IDLE';
+            checkGameOver();
+            draw();
         }
-    }
+    });
 }
 
 function checkGameOver() {
     if (moves <= 0) {
+        state = 'GAME_OVER';
         gameOverEl.style.display = 'block';
         finalScoreEl.innerText = score;
         if (window.submitScoreToSL) window.submitScoreToSL(score);
     }
+}
+
+
+// --- ANIMATION LOOP ---
+
+function updateTargets() {
+    for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+            grid[c][r].targetX = c * TILE_SIZE;
+            grid[c][r].targetY = r * TILE_SIZE;
+        }
+    }
+}
+
+function animate(onComplete) {
+    let moving = true;
+
+    function loop() {
+        moving = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let c = 0; c < COLS; c++) {
+            for (let r = 0; r < ROWS; r++) {
+                let t = grid[c][r];
+                if (!t) continue;
+
+                // Lerp Position
+                let dx = t.targetX - t.x;
+                let dy = t.targetY - t.y;
+
+                if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                    t.x += dx * 0.2;
+                    t.y += dy * 0.2;
+                    moving = true;
+                } else {
+                    t.x = t.targetX;
+                    t.y = t.targetY;
+                }
+
+                // Render
+                if (!t.isMatched || t.scale > 0.1) {
+                    drawTile(t);
+                }
+            }
+        }
+
+        if (moving) {
+            requestAnimationFrame(loop);
+        } else {
+            if (onComplete) onComplete();
+        }
+    }
+    loop();
+}
+
+// --- DRAWING ---
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+            let t = grid[c][r];
+            if (t) drawTile(t);
+        }
+    }
+}
+
+function drawTile(t) {
+    if (t.isMatched) return; // Don't draw popped
+
+    let cx = t.x + TILE_SIZE / 2;
+    let cy = t.y + TILE_SIZE / 2;
+    let size = (TILE_SIZE / 2 - 4) * t.scale;
+
+    // Selection Halo
+    if (selectedTile && selectedTile.c === t.c && selectedTile.r === t.r) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(cx, cy, size + 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+
+    // Balloon Body
+    ctx.fillStyle = COLORS[t.color];
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 2, size, size * 1.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Specular Highlight (The 'Glossy' look)
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(cx - size * 0.3, cy - size * 0.4, size * 0.2, size * 0.1, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // String Knot
+    ctx.fillStyle = COLORS[t.color];
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 1.1);
+    ctx.lineTo(cx - 3, cy + size * 1.35);
+    ctx.lineTo(cx + 3, cy + size * 1.35);
+    ctx.fill();
+
+    // Type Indicator (Striped, Bomb) could be drawn here later
+}
+
+function updateUI() {
+    scoreEl.innerText = score;
+    movesEl.innerText = moves;
 }
 
 startGame();
