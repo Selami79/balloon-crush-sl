@@ -837,79 +837,73 @@ function triggerSpecialEffect(tile) {
 }
 
 function applyGravity(specialCreated = null) {
-    // Simple gravity: for each column, drop tiles down to fill gaps
+    // State is now moving
+    state = 'GRAVITY';
+
+    // Step 1: Process each column independently
     for (let c = 0; c < COLS; c++) {
-        // Step 1: Collect all non-matched tiles
-        let keepTiles = [];  // Regular tiles to reposition
-        let walls = [];      // Walls with their fixed positions
+        // Collect tiles that stay (not matched)
+        let survivingTiles = [];
+        let walls = {}; // Store walls by row: {row: tile}
 
         for (let r = 0; r < ROWS; r++) {
             let tile = grid[c][r];
-            if (tile.isMatched) {
-                // This tile is destroyed, skip it
-                continue;
-            }
-            if (tile.obstacle === OBS_WALL) {
-                // Wall stays at its position
-                walls.push({ tile: tile, row: r });
-            } else {
-                // Regular tile, will be repositioned
-                keepTiles.push(tile);
+            if (tile.obstacle === OBS_WALL && !tile.isMatched) {
+                // Keep live wall at its exact row
+                walls[r] = tile;
+            } else if (!tile.isMatched) {
+                // Keep non-matched tile to be shifted down
+                survivingTiles.push(tile);
             }
         }
 
-        // Step 2: Clear the column
-        for (let r = 0; r < ROWS; r++) {
-            grid[c][r] = null;
-        }
+        // Step 2: Clear and rebuild column
+        let tileIdx = survivingTiles.length - 1; // Start from bottom-most surviving tile
 
-        // Step 3: Place walls back at their fixed positions
-        for (let w of walls) {
-            grid[c][w.row] = w.tile;
-        }
-
-        // Step 4: Fill from bottom, skipping wall positions
-        let tileIdx = keepTiles.length - 1;
         for (let r = ROWS - 1; r >= 0; r--) {
-            if (grid[c][r] !== null) {
-                // Wall is here
-                continue;
-            }
-            if (tileIdx >= 0) {
-                let tile = keepTiles[tileIdx];
+            if (walls[r]) {
+                // If there's a wall at this row, it stays
+                grid[c][r] = walls[r];
+                grid[c][r].isMatched = false; // Reset just in case
+            } else if (tileIdx >= 0) {
+                // Fill with an existing surviving tile
+                let tile = survivingTiles[tileIdx];
                 grid[c][r] = tile;
                 tile.c = c;
                 tile.r = r;
                 tile.targetX = c * TILE_SIZE;
                 tile.targetY = r * TILE_SIZE;
+                tile.isMatched = false; // Ensure it's visible
+                tile.targetScale = 1;   // Ensure it's full size
                 tileIdx--;
             } else {
-                // Need a new tile
-                grid[c][r] = createNewTile(c, r);
+                // Column is empty, generate new tile
+                let newTile = createNewTile(c, r);
+                grid[c][r] = newTile;
+                // Important: If a new tile is created, its 'y' should be staggered
+                // to create a nice 'falling in' effect
+                newTile.y = -TILE_SIZE * (Math.abs(tileIdx) + 2);
+                tileIdx--;
             }
         }
     }
 
-    // Safety check: fill any nulls
-    for (let c = 0; c < COLS; c++) {
-        for (let r = 0; r < ROWS; r++) {
-            if (!grid[c][r]) {
-                console.log("NULL FOUND at", c, r);
-                grid[c][r] = createNewTile(c, r);
-            }
-        }
-    }
-
+    // Special creation check (if a 4+ match was made)
     if (specialCreated && grid[specialCreated.pos.c] && grid[specialCreated.pos.c][specialCreated.pos.r]) {
-        grid[specialCreated.pos.c][specialCreated.pos.r].type = specialCreated.type;
-        grid[specialCreated.pos.c][specialCreated.pos.r].color = specialCreated.color;
+        let t = grid[specialCreated.pos.c][specialCreated.pos.r];
+        t.type = specialCreated.type;
+        t.color = specialCreated.color;
+        t.isMatched = false;
+        t.targetScale = 1;
     }
 
+    // Wait for animations to settle, then check for chain reactions
     setTimeout(() => {
-        let newMatches = findMatches();
-        if (newMatches.length > 0) {
-            processMatches(newMatches);
+        let nextMatches = findMatches();
+        if (nextMatches.length > 0) {
+            processMatches(nextMatches);
         } else {
+            // No more matches, check for moves or level end
             if (!findHint()) {
                 shuffleGrid();
             } else {
@@ -917,7 +911,7 @@ function applyGravity(specialCreated = null) {
                 checkLevelStatus();
             }
         }
-    }, 300);
+    }, 400); // Increased time to ensure animations finish
 }
 
 function shuffleGrid() {
