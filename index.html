@@ -24,7 +24,6 @@
             overflow: hidden;
         }
 
-        /* Animated background stars */
         body::before {
             content: '';
             position: fixed;
@@ -36,9 +35,7 @@
                 radial-gradient(2px 2px at 20px 30px, #fff, transparent),
                 radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.8), transparent),
                 radial-gradient(1px 1px at 90px 40px, #fff, transparent),
-                radial-gradient(2px 2px at 160px 120px, rgba(255, 255, 255, 0.9), transparent),
-                radial-gradient(1px 1px at 230px 80px, #fff, transparent),
-                radial-gradient(2px 2px at 300px 150px, rgba(255, 255, 255, 0.7), transparent);
+                radial-gradient(2px 2px at 160px 120px, rgba(255, 255, 255, 0.9), transparent);
             background-size: 350px 200px;
             animation: twinkle 4s ease-in-out infinite;
             pointer-events: none;
@@ -60,169 +57,233 @@
         #header {
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 140, 0, 0.2) 100%);
             border: 2px solid rgba(255, 215, 0, 0.5);
-            padding: 15px 40px;
+            padding: 12px 30px;
             border-radius: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             display: flex;
-            gap: 50px;
+            gap: 30px;
             color: white;
-            font-size: 20px;
+            font-size: 18px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
         }
 
         #header div {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         #header span {
             color: #FFD700;
-            font-size: 24px;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            font-size: 22px;
         }
 
         #game-wrapper {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-            padding: 15px;
-            border-radius: 25px;
+            padding: 12px;
+            border-radius: 20px;
             border: 3px solid rgba(255, 255, 255, 0.2);
-            box-shadow:
-                0 0 40px rgba(138, 43, 226, 0.3),
-                inset 0 0 30px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.3);
         }
 
         #game {
             display: grid;
-            grid-template-columns: repeat(8, 52px);
-            grid-template-rows: repeat(8, 52px);
-            gap: 4px;
+            grid-template-columns: repeat(8, 50px);
+            grid-template-rows: repeat(8, 50px);
+            gap: 3px;
             background: rgba(0, 0, 0, 0.3);
-            padding: 8px;
-            border-radius: 15px;
+            padding: 6px;
+            border-radius: 12px;
         }
 
         .cell {
-            width: 52px;
-            height: 52px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.15s ease;
             position: relative;
-            box-shadow:
-                0 4px 8px rgba(0, 0, 0, 0.3),
-                inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        /* Balloon shine effect */
         .cell::before {
             content: '';
             position: absolute;
-            top: 8px;
-            left: 12px;
-            width: 12px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.6);
+            top: 6px;
+            left: 10px;
+            width: 10px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.5);
             border-radius: 50%;
             transform: rotate(-30deg);
         }
 
-        /* Balloon knot */
-        .cell::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 8px;
-            height: 6px;
-            background: inherit;
-            filter: brightness(0.7);
-            clip-path: polygon(50% 100%, 0 0, 100% 0);
-        }
-
         .cell:hover {
-            transform: scale(1.15) translateY(-5px);
-            box-shadow:
-                0 8px 20px rgba(0, 0, 0, 0.4),
-                0 0 20px currentColor;
+            transform: scale(1.1);
         }
 
         .cell.selected {
-            transform: scale(1.2) translateY(-8px);
-            animation: bounce 0.5s ease infinite;
-            box-shadow:
-                0 10px 30px rgba(0, 0, 0, 0.5),
-                0 0 30px currentColor,
-                0 0 60px currentColor;
+            transform: scale(1.15);
+            box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+            animation: pulse 0.5s ease infinite;
         }
 
-        @keyframes bounce {
+        @keyframes pulse {
 
             0%,
             100% {
-                transform: scale(1.2) translateY(-8px);
+                transform: scale(1.15);
             }
 
             50% {
-                transform: scale(1.25) translateY(-12px);
+                transform: scale(1.2);
             }
         }
 
-        .cell.matched {
-            transform: scale(0) rotate(180deg);
-            opacity: 0;
-        }
-
-        /* High-Contrast Balloon Colors - Very Distinct */
+        /* Normal Colors */
         .color0 {
-            /* PURE RED */
             background: radial-gradient(circle at 30% 25%, #ff6b6b 0%, #ee0000 60%, #aa0000 100%);
             color: #ee0000;
         }
 
         .color1 {
-            /* ROYAL BLUE */
             background: radial-gradient(circle at 30% 25%, #6eb5ff 0%, #0066ff 60%, #0044aa 100%);
             color: #0066ff;
         }
 
         .color2 {
-            /* BRIGHT GREEN */
             background: radial-gradient(circle at 30% 25%, #7dff7d 0%, #00cc00 60%, #008800 100%);
             color: #00cc00;
         }
 
         .color3 {
-            /* GOLDEN YELLOW */
             background: radial-gradient(circle at 30% 25%, #ffff80 0%, #ffcc00 60%, #cc9900 100%);
             color: #ffcc00;
         }
 
         .color4 {
-            /* DEEP PURPLE */
             background: radial-gradient(circle at 30% 25%, #cc99ff 0%, #9933ff 60%, #6600cc 100%);
             color: #9933ff;
         }
 
         .color5 {
-            /* HOT ORANGE */
             background: radial-gradient(circle at 30% 25%, #ffb366 0%, #ff6600 60%, #cc4400 100%);
             color: #ff6600;
         }
 
-        /* Target info */
+        /* Special: Striped Horizontal */
+        .striped-h::after {
+            content: '═';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            color: white;
+            text-shadow: 0 0 5px black;
+        }
+
+        /* Special: Striped Vertical */
+        .striped-v::after {
+            content: '║';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            color: white;
+            text-shadow: 0 0 5px black;
+        }
+
+        /* Special: Bomb */
+        .bomb::after {
+            content: '💥';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+
+        /* Special: Color Bomb */
+        .color-bomb {
+            background: conic-gradient(#ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #9900ff, #ff0000) !important;
+            animation: rainbow-spin 2s linear infinite;
+        }
+
+        .color-bomb::after {
+            content: '⭐';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 26px;
+        }
+
+        @keyframes rainbow-spin {
+            from {
+                filter: hue-rotate(0deg);
+            }
+
+            to {
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        /* Ice obstacle */
+        .ice {
+            box-shadow: 0 0 10px #88ddff, inset 0 0 15px rgba(136, 221, 255, 0.5);
+            border: 3px solid rgba(136, 221, 255, 0.8);
+        }
+
+        .ice::before {
+            content: '❄';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 12px;
+        }
+
         #target-info {
             text-align: center;
             color: #aaa;
             font-size: 14px;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         #target-info span {
             color: #FFD700;
             font-size: 16px;
+        }
+
+        /* Combo text */
+        .combo-text {
+            position: fixed;
+            font-size: 40px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 20px #ff6600, 2px 2px 0 #000;
+            pointer-events: none;
+            animation: combo-pop 1s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes combo-pop {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 0;
+                top: 30%;
+            }
         }
     </style>
 </head>
@@ -239,22 +300,95 @@
     <div id="target-info">Target: <span id="target">500</span> pts</div>
 
     <script>
-        // ===== GAME CONFIG =====
-        const COLS = 8;
-        const ROWS = 8;
-        const COLORS = 6;
+        // ===== CONFIG =====
+        const COLS = 8, ROWS = 8, COLORS = 6;
+        const NORMAL = 0, STRIPED_H = 1, STRIPED_V = 2, BOMB = 3, COLOR_BOMB = 4;
+        const OBS_NONE = 0, OBS_ICE = 1;
+
+        // ===== AUDIO =====
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            switch (type) {
+                case 'pop':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600 + Math.random() * 200, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                    break;
+                case 'special':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
+                    break;
+                case 'combo':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                    break;
+                case 'levelup':
+                    osc.type = 'sine';
+                    [523, 659, 784, 1047].forEach((f, i) => {
+                        osc.frequency.setValueAtTime(f, now + i * 0.1);
+                    });
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now); osc.stop(now + 0.5);
+                    break;
+                case 'swap':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(500, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now); osc.stop(now + 0.05);
+                    break;
+            }
+        }
 
         // ===== GAME STATE =====
         let grid = [];
         let selected = null;
-        let score = 0;
-        let moves = 30;
-        let level = 1;
+        let score = 0, moves = 30, level = 1;
         let isAnimating = false;
+        let comboCount = 0;
+
+        // Level configs
+        function getLevelConfig(lvl) {
+            return {
+                target: 400 + lvl * 200,
+                moves: Math.max(15, 32 - lvl * 2),
+                iceCount: Math.min(lvl * 2, 16)
+            };
+        }
 
         // ===== INIT =====
         function init() {
+            const config = getLevelConfig(level);
+            moves = config.moves;
             createGrid();
+            addObstacles(config.iceCount);
             removeInitialMatches();
             render();
         }
@@ -264,7 +398,19 @@
             for (let r = 0; r < ROWS; r++) {
                 grid[r] = [];
                 for (let c = 0; c < COLS; c++) {
-                    grid[r][c] = randomColor();
+                    grid[r][c] = { color: randomColor(), type: NORMAL, obstacle: OBS_NONE };
+                }
+            }
+        }
+
+        function addObstacles(count) {
+            let placed = 0;
+            while (placed < count) {
+                const r = Math.floor(Math.random() * ROWS);
+                const c = Math.floor(Math.random() * COLS);
+                if (grid[r][c].obstacle === OBS_NONE) {
+                    grid[r][c].obstacle = OBS_ICE;
+                    placed++;
                 }
             }
         }
@@ -274,20 +420,16 @@
         }
 
         function removeInitialMatches() {
-            let hasMatches = true;
             let iterations = 0;
-            while (hasMatches && iterations < 100) {
-                hasMatches = false;
+            while (findMatches().length > 0 && iterations < 100) {
                 iterations++;
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
-                        if (c >= 2 && grid[r][c] === grid[r][c - 1] && grid[r][c] === grid[r][c - 2]) {
-                            grid[r][c] = (grid[r][c] + 1) % COLORS;
-                            hasMatches = true;
+                        if (c >= 2 && grid[r][c].color === grid[r][c - 1].color && grid[r][c].color === grid[r][c - 2].color) {
+                            grid[r][c].color = (grid[r][c].color + 1) % COLORS;
                         }
-                        if (r >= 2 && grid[r][c] === grid[r - 1][c] && grid[r][c] === grid[r - 2][c]) {
-                            grid[r][c] = (grid[r][c] + 1) % COLORS;
-                            hasMatches = true;
+                        if (r >= 2 && grid[r][c].color === grid[r - 1][c].color && grid[r][c].color === grid[r - 2][c].color) {
+                            grid[r][c].color = (grid[r][c].color + 1) % COLORS;
                         }
                     }
                 }
@@ -301,16 +443,25 @@
 
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
+                    const tile = grid[r][c];
                     const cell = document.createElement('div');
-                    cell.className = `cell color${grid[r][c]}`;
-                    cell.dataset.row = r;
-                    cell.dataset.col = c;
+
+                    if (tile.type === COLOR_BOMB) {
+                        cell.className = 'cell color-bomb';
+                    } else {
+                        cell.className = `cell color${tile.color}`;
+                    }
+
+                    if (tile.type === STRIPED_H) cell.classList.add('striped-h');
+                    if (tile.type === STRIPED_V) cell.classList.add('striped-v');
+                    if (tile.type === BOMB) cell.classList.add('bomb');
+                    if (tile.obstacle === OBS_ICE) cell.classList.add('ice');
 
                     if (selected && selected.r === r && selected.c === c) {
                         cell.classList.add('selected');
                     }
 
-                    cell.onclick = () => onCellClick(r, c);
+                    cell.onclick = () => { initAudio(); onCellClick(r, c); };
                     gameEl.appendChild(cell);
                 }
             }
@@ -318,15 +469,16 @@
             document.getElementById('score').textContent = score;
             document.getElementById('moves').textContent = moves;
             document.getElementById('level').textContent = level;
-            document.getElementById('target').textContent = level * 500;
+            document.getElementById('target').textContent = getLevelConfig(level).target;
         }
 
-        // ===== CLICK HANDLER =====
+        // ===== CLICK =====
         function onCellClick(r, c) {
             if (isAnimating || moves <= 0) return;
 
             if (!selected) {
                 selected = { r, c };
+                playSound('swap');
                 render();
             } else {
                 const dr = Math.abs(r - selected.r);
@@ -347,7 +499,8 @@
             const matches = findMatches();
             if (matches.length > 0) {
                 moves--;
-                processMatches(matches);
+                comboCount = 0;
+                processMatches(matches, { r: r2, c: c2 });
             } else {
                 swap(r1, c1, r2, c2);
             }
@@ -361,48 +514,168 @@
 
         // ===== FIND MATCHES =====
         function findMatches() {
-            const matched = new Set();
+            const matched = [];
 
+            // Horizontal
             for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS - 2; c++) {
-                    if (grid[r][c] === grid[r][c + 1] && grid[r][c] === grid[r][c + 2]) {
-                        matched.add(`${r},${c}`);
-                        matched.add(`${r},${c + 1}`);
-                        matched.add(`${r},${c + 2}`);
+                let c = 0;
+                while (c < COLS) {
+                    const color = grid[r][c].color;
+                    let count = 1;
+                    while (c + count < COLS && grid[r][c + count].color === color) count++;
+                    if (count >= 3) {
+                        const match = { cells: [], horizontal: true, vertical: false };
+                        for (let i = 0; i < count; i++) match.cells.push({ r, c: c + i });
+                        matched.push(match);
                     }
+                    c += count;
                 }
             }
 
-            for (let r = 0; r < ROWS - 2; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (grid[r][c] === grid[r + 1][c] && grid[r][c] === grid[r + 2][c]) {
-                        matched.add(`${r},${c}`);
-                        matched.add(`${r + 1},${c}`);
-                        matched.add(`${r + 2},${c}`);
+            // Vertical
+            for (let c = 0; c < COLS; c++) {
+                let r = 0;
+                while (r < ROWS) {
+                    const color = grid[r][c].color;
+                    let count = 1;
+                    while (r + count < ROWS && grid[r + count][c].color === color) count++;
+                    if (count >= 3) {
+                        const match = { cells: [], horizontal: false, vertical: true };
+                        for (let i = 0; i < count; i++) match.cells.push({ r: r + i, c });
+                        matched.push(match);
                     }
+                    r += count;
                 }
             }
 
-            return Array.from(matched).map(s => {
-                const [r, c] = s.split(',').map(Number);
-                return { r, c };
-            });
+            return matched;
         }
 
         // ===== PROCESS MATCHES =====
-        function processMatches(matches) {
+        function processMatches(matches, swapPos) {
             isAnimating = true;
+            comboCount++;
 
-            matches.forEach(m => {
-                grid[m.r][m.c] = -1;
+            if (comboCount > 1) {
+                showCombo(comboCount);
+                playSound('combo');
+            }
+
+            let allCells = [];
+            let specialToCreate = null;
+
+            matches.forEach(match => {
+                const count = match.cells.length;
+
+                // Determine special creation
+                if (count >= 5) {
+                    specialToCreate = { type: COLOR_BOMB, pos: match.cells[2] };
+                } else if (count === 4) {
+                    if (match.horizontal) {
+                        specialToCreate = { type: STRIPED_V, pos: match.cells[1], color: grid[match.cells[0].r][match.cells[0].c].color };
+                    } else {
+                        specialToCreate = { type: STRIPED_H, pos: match.cells[1], color: grid[match.cells[0].r][match.cells[0].c].color };
+                    }
+                }
+
+                match.cells.forEach(cell => {
+                    if (!allCells.find(c => c.r === cell.r && c.c === cell.c)) {
+                        allCells.push(cell);
+                    }
+                });
             });
 
-            score += matches.length * 10;
-            render();
+            // Check for L/T shape (bomb)
+            const cellSet = new Set(allCells.map(c => `${c.r},${c.c}`));
+            allCells.forEach(cell => {
+                // Check if this cell is intersection of H and V matches
+                const hasH = allCells.filter(c => c.r === cell.r).length >= 3;
+                const hasV = allCells.filter(c => c.c === cell.c).length >= 3;
+                if (hasH && hasV) {
+                    specialToCreate = { type: BOMB, pos: cell, color: grid[cell.r][cell.c].color };
+                }
+            });
 
-            setTimeout(() => {
-                applyGravity();
-            }, 200);
+            // Trigger special abilities
+            allCells.forEach(cell => {
+                const tile = grid[cell.r][cell.c];
+                if (tile.type === STRIPED_H) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (!allCells.find(x => x.r === cell.r && x.c === c)) {
+                            allCells.push({ r: cell.r, c });
+                        }
+                    }
+                    playSound('special');
+                } else if (tile.type === STRIPED_V) {
+                    for (let r = 0; r < ROWS; r++) {
+                        if (!allCells.find(x => x.r === r && x.c === cell.c)) {
+                            allCells.push({ r, c: cell.c });
+                        }
+                    }
+                    playSound('special');
+                } else if (tile.type === BOMB) {
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            const nr = cell.r + dr, nc = cell.c + dc;
+                            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                                if (!allCells.find(x => x.r === nr && x.c === nc)) {
+                                    allCells.push({ r: nr, c: nc });
+                                }
+                            }
+                        }
+                    }
+                    playSound('special');
+                } else if (tile.type === COLOR_BOMB) {
+                    const targetColor = grid[swapPos.r][swapPos.c].color;
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            if (grid[r][c].color === targetColor) {
+                                if (!allCells.find(x => x.r === r && x.c === c)) {
+                                    allCells.push({ r, c });
+                                }
+                            }
+                        }
+                    }
+                    playSound('special');
+                }
+            });
+
+            // Clear cells
+            allCells.forEach(cell => {
+                const tile = grid[cell.r][cell.c];
+                if (tile.obstacle === OBS_ICE) {
+                    tile.obstacle = OBS_NONE;
+                    score += 5;
+                } else {
+                    tile.color = -1;
+                    tile.type = NORMAL;
+                    score += 10;
+                }
+                playSound('pop');
+            });
+
+            // Create special
+            if (specialToCreate && specialToCreate.pos) {
+                const { r, c } = specialToCreate.pos;
+                if (grid[r][c].color === -1) {
+                    grid[r][c].color = specialToCreate.color !== undefined ? specialToCreate.color : randomColor();
+                }
+                grid[r][c].type = specialToCreate.type;
+            }
+
+            render();
+            setTimeout(() => applyGravity(), 200);
+        }
+
+        function showCombo(count) {
+            const text = document.createElement('div');
+            text.className = 'combo-text';
+            text.textContent = count + 'x COMBO!';
+            text.style.left = '50%';
+            text.style.top = '50%';
+            text.style.transform = 'translate(-50%, -50%)';
+            document.body.appendChild(text);
+            setTimeout(() => text.remove(), 1000);
         }
 
         // ===== GRAVITY =====
@@ -411,17 +684,17 @@
                 let writeRow = ROWS - 1;
 
                 for (let r = ROWS - 1; r >= 0; r--) {
-                    if (grid[r][c] !== -1) {
-                        grid[writeRow][c] = grid[r][c];
+                    if (grid[r][c].color !== -1) {
                         if (writeRow !== r) {
-                            grid[r][c] = -1;
+                            grid[writeRow][c] = grid[r][c];
+                            grid[r][c] = { color: -1, type: NORMAL, obstacle: OBS_NONE };
                         }
                         writeRow--;
                     }
                 }
 
                 for (let r = writeRow; r >= 0; r--) {
-                    grid[r][c] = randomColor();
+                    grid[r][c] = { color: randomColor(), type: NORMAL, obstacle: OBS_NONE };
                 }
             }
 
@@ -430,7 +703,7 @@
             setTimeout(() => {
                 const newMatches = findMatches();
                 if (newMatches.length > 0) {
-                    processMatches(newMatches);
+                    processMatches(newMatches, { r: 0, c: 0 });
                 } else {
                     isAnimating = false;
                     checkGameState();
@@ -440,20 +713,17 @@
 
         // ===== GAME STATE =====
         function checkGameState() {
-            const target = level * 500;
-            if (score >= target) {
+            const config = getLevelConfig(level);
+            if (score >= config.target) {
+                playSound('levelup');
                 level++;
-                moves += 10;
                 alert('🎉 Level ' + (level - 1) + ' Complete!');
-                render();
+                init();
             } else if (moves <= 0) {
                 alert('💔 Game Over!\nScore: ' + score);
                 score = 0;
-                moves = 30;
                 level = 1;
-                createGrid();
-                removeInitialMatches();
-                render();
+                init();
             }
         }
 
