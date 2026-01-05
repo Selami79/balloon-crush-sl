@@ -690,6 +690,49 @@
 
         // ===== SWAP =====
         function trySwap(r1, c1, r2, c2) {
+            const tile1 = grid[r1][c1];
+            const tile2 = grid[r2][c2];
+
+            // Color Bomb activation
+            if (tile1.type === COLOR_BOMB || tile2.type === COLOR_BOMB) {
+                moves--;
+                const colorBombTile = tile1.type === COLOR_BOMB ? tile1 : tile2;
+                const otherTile = tile1.type === COLOR_BOMB ? tile2 : tile1;
+                const targetColor = otherTile.color;
+
+                // Clear all balloons of target color
+                const cellsToClear = [];
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (grid[r][c].color === targetColor) {
+                            cellsToClear.push({ r, c });
+                        }
+                    }
+                }
+                // Also clear the color bomb itself
+                cellsToClear.push(tile1.type === COLOR_BOMB ? { r: r1, c: c1 } : { r: r2, c: c2 });
+
+                playSound('special');
+                isAnimating = true;
+
+                // Clear all matching cells
+                cellsToClear.forEach(cell => {
+                    const tile = grid[cell.r][cell.c];
+                    if (tile.color >= 0) {
+                        targetProgress.colors[tile.color]++;
+                        targetProgress.score += 10;
+                    }
+                    tile.color = -1;
+                    tile.type = NORMAL;
+                    score += 10;
+                    playSound('pop');
+                });
+
+                render();
+                setTimeout(() => applyGravity(), 200);
+                return;
+            }
+
             swap(r1, c1, r2, c2);
 
             const matches = findMatches();
