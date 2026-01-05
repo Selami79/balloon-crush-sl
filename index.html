@@ -337,68 +337,76 @@
 <body>
     <div id="main-container" style="
         display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        gap: 20px;
-        padding: 20px;
-        max-width: 100%;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
     ">
-        <!-- LEFT PANEL: Player & Quit -->
-        <div id="left-panel" style="
+        <!-- TOP: Targets -->
+        <div id="targets-panel" style="
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            min-width: 150px;
-            padding: 15px;
-            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            gap: 25px;
+            padding: 15px 30px;
+            background: rgba(0,0,0,0.6);
             border-radius: 20px;
-        ">
-            <div id="sl-status" style="color:#FFD700;font-size:20px;font-weight:bold;text-align:center;">GUEST</div>
-            <div style="color:#aaa;font-size:14px;">🏆 <span id="score" style="color:#FFD700;font-size:18px;">0</span>
-            </div>
-            <div style="color:#aaa;font-size:14px;">🎯 <span id="moves" style="color:#fff;font-size:18px;">30</span>
-            </div>
-            <div style="color:#aaa;font-size:14px;">⭐ <span id="level" style="color:#fff;font-size:18px;">1</span></div>
-            <button id="quit-btn" onclick="quitGame()" style="
-                padding: 12px 25px;
-                font-size: 16px;
-                font-family: 'Fredoka One', sans-serif;
-                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-                color: white;
-                border: none;
-                border-radius: 20px;
-                cursor: pointer;
-                box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
-            ">🚪 Quit</button>
-        </div>
+            flex-wrap: wrap;
+        "></div>
 
-        <!-- CENTER: Game Board -->
-        <div id="center-panel">
+        <!-- MIDDLE: Game with side info -->
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <!-- LEFT: Score, Moves, Level -->
+            <div id="left-panel" style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                padding: 20px;
+                background: rgba(0,0,0,0.5);
+                border-radius: 20px;
+                min-width: 120px;
+            ">
+                <div style="text-align:center;">
+                    <div style="color:#888;font-size:14px;">🏆 SCORE</div>
+                    <div id="score" style="color:#FFD700;font-size:28px;font-weight:bold;">0</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="color:#888;font-size:14px;">🎯 MOVES</div>
+                    <div id="moves" style="color:#fff;font-size:28px;font-weight:bold;">30</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="color:#888;font-size:14px;">⭐ LEVEL</div>
+                    <div id="level" style="color:#fff;font-size:28px;font-weight:bold;">1</div>
+                </div>
+            </div>
+
+            <!-- CENTER: Game Board -->
             <div id="game-wrapper">
                 <div id="game"></div>
             </div>
         </div>
 
-        <!-- RIGHT PANEL: Targets -->
-        <div id="right-panel" style="
+        <!-- BOTTOM: Player & Quit -->
+        <div id="bottom-panel" style="
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 15px;
-            min-width: 180px;
-            padding: 20px;
-            background: rgba(0,0,0,0.6);
+            gap: 30px;
+            padding: 12px 30px;
+            background: rgba(0,0,0,0.5);
             border-radius: 20px;
         ">
-            <div style="color:#FFD700;font-size:22px;font-weight:bold;text-shadow:2px 2px 4px rgba(0,0,0,0.5);">🎯
-                HEDEFLER</div>
-            <div id="targets-panel" style="
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-                width: 100%;
-            "></div>
+            <div id="sl-status" style="color:#FFD700;font-size:22px;font-weight:bold;">🎮 GUEST</div>
+            <button id="quit-btn" onclick="quitGame()" style="
+                padding: 12px 30px;
+                font-size: 18px;
+                font-family: 'Fredoka One', sans-serif;
+                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            ">🚪 Quit & Save</button>
         </div>
     </div>
 
@@ -688,16 +696,14 @@
                 const percent = Math.min(100, (current / goal) * 100);
 
                 const div = document.createElement('div');
-                div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px;background:rgba(255,255,255,0.1);border-radius:12px;';
+                div.style.cssText = 'text-align:center;padding:10px 15px;background:rgba(255,255,255,0.1);border-radius:15px;min-width:90px;';
                 div.innerHTML = `
-                    <div style="font-size:36px;">${icon}</div>
-                    <div style="flex:1;">
-                        <div style="color:${complete ? '#2ecc71' : '#fff'};font-size:20px;font-weight:bold;">${Math.min(current, goal)}/${goal}</div>
-                        <div style="width:100%;height:10px;background:#333;border-radius:5px;margin-top:5px;">
-                            <div style="width:${percent}%;height:100%;background:${complete ? '#2ecc71' : '#f1c40f'};border-radius:5px;transition:width 0.3s;"></div>
-                        </div>
+                    <div style="font-size:32px;margin-bottom:5px;">${icon}</div>
+                    <div style="color:${complete ? '#2ecc71' : '#fff'};font-size:18px;font-weight:bold;">${Math.min(current, goal)}/${goal}</div>
+                    <div style="width:100%;height:8px;background:#333;border-radius:4px;margin-top:6px;">
+                        <div style="width:${percent}%;height:100%;background:${complete ? '#2ecc71' : '#f1c40f'};border-radius:4px;transition:width 0.3s;"></div>
                     </div>
-                    ${complete ? '<div style="color:#2ecc71;font-size:24px;">✓</div>' : ''}
+                    ${complete ? '<div style="color:#2ecc71;font-size:18px;margin-top:4px;">✓</div>' : ''}
                 `;
                 panel.appendChild(div);
             });
