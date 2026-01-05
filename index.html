@@ -57,25 +57,25 @@
         #header {
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 140, 0, 0.2) 100%);
             border: 2px solid rgba(255, 215, 0, 0.5);
-            padding: 12px 30px;
+            padding: 15px 40px;
             border-radius: 20px;
             margin-bottom: 10px;
             display: flex;
-            gap: 30px;
+            gap: 40px;
             color: white;
-            font-size: 18px;
+            font-size: 24px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         #header div {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         #header span {
             color: #FFD700;
-            font-size: 22px;
+            font-size: 28px;
         }
 
         #game-wrapper {
@@ -343,8 +343,9 @@
     <div id="game-wrapper">
         <div id="game"></div>
     </div>
-    <div id="target-info">Target: <span id="target">500</span> pts</div>
-    <div id="sl-status" style="text-align:center;color:#888;font-size:12px;margin-top:5px;">GUEST PLAYER</div>
+    <div id="target-info" style="text-align:center;color:#ccc;font-size:20px;margin-top:10px;">Target: <span id="target"
+            style="color:#FFD700;font-size:24px;">500</span> pts</div>
+    <div id="sl-status" style="text-align:center;color:#888;font-size:18px;margin-top:8px;">GUEST PLAYER</div>
 
     <script>
         // ===== CONFIG =====
@@ -873,6 +874,6 @@
         // ===== START =====
         init();
     </script>
+    <script src="js/sl_bridge.js?v=43"></script>
 </body>
-
 </html>
