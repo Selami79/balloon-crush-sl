@@ -863,6 +863,14 @@
         }
 
         // ===== GAME STATE =====
+        function showMessage(text, duration) {
+            const msg = document.createElement('div');
+            msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:#FFD700;padding:30px 50px;border-radius:20px;font-size:28px;text-align:center;z-index:1000;animation:fadeIn 0.3s;';
+            msg.innerHTML = text;
+            document.body.appendChild(msg);
+            setTimeout(function () { msg.remove(); }, duration || 2000);
+        }
+
         function checkGameState() {
             const config = getLevelConfig(level);
             if (score >= config.target) {
@@ -872,40 +880,61 @@
                 if (window.submitLevelToSL) {
                     window.submitLevelToSL(level);
                 }
-                alert('🎉 Level ' + (level - 1) + ' Complete!');
-                init();
+                showMessage('🎉 Level ' + (level - 1) + ' Complete!', 2000);
+                setTimeout(function () { init(); }, 2000);
             } else if (moves <= 0) {
                 // Submit final score to SL
                 if (window.submitScoreToSL) {
                     window.submitScoreToSL(score, level);
                 }
-                alert('💔 Game Over!\nScore: ' + score + '\nLevel: ' + level);
-                score = 0;
-                level = 1;
-                init();
+                showMessage('💔 Game Over!<br>Score: ' + score + '<br>Level: ' + level, 3000);
+                setTimeout(function () {
+                    score = 0;
+                    level = 1;
+                    init();
+                }, 3000);
             }
         }
 
         // ===== QUIT GAME =====
         function quitGame() {
-            if (confirm('🚪 Quit game?\nYour score (' + score + ') will be saved.')) {
-                // Always submit score to SL (even if 0, to trigger close)
-                if (window.submitScoreToSL) {
-                    // Send at least 1 point to trigger the close
-                    window.submitScoreToSL(Math.max(score, 1), level);
-                }
-                alert('👋 Thanks for playing!\nFinal Score: ' + score + '\nLevel: ' + level);
-                // Reset game
+            // No confirm() - SL browser doesn't support it
+            // Show visual feedback
+            const btn = document.getElementById('quit-btn');
+            btn.innerText = '⏳ Saving...';
+            btn.disabled = true;
+
+            // Always submit score to SL (even if 0, to trigger close)
+            if (window.submitScoreToSL) {
+                window.submitScoreToSL(Math.max(score, 1), level);
+            }
+
+            // Visual confirmation instead of alert
+            btn.innerText = '✅ Score Saved!';
+            btn.style.background = 'linear-gradient(135deg, #27ae60 0%, #1e8449 100%)';
+
+            // Show message on screen
+            const msg = document.createElement('div');
+            msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:#FFD700;padding:30px 50px;border-radius:20px;font-size:24px;text-align:center;z-index:1000;';
+            msg.innerHTML = '👋 Thanks for playing!<br>Score: ' + score + '<br>Level: ' + level;
+            document.body.appendChild(msg);
+
+            // Wait then reset
+            setTimeout(function () {
                 score = 0;
                 level = 1;
                 init();
-            }
+                msg.remove();
+                btn.innerText = '🚪 Quit & Save';
+                btn.disabled = false;
+                btn.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+            }, 3000);
         }
 
         // ===== START =====
         init();
     </script>
-    <script src="js/sl_bridge.js?v=50"></script>
+    <script src="js/sl_bridge.js?v=52"></script>
 </body>
 
 </html>
