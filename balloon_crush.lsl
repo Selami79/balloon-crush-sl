@@ -1,5 +1,5 @@
-// BALLOON CRUSH - Second Life Integration Script v2
-// Level progress saved in LSL, not browser localStorage
+// BALLOON CRUSH - Second Life Integration Script v3
+// Level progress and high scores saved in LSL
 
 string GAME_BASE_URL = "https://selami79.github.io/balloon-crush-sl/"; 
 string STANDBY_TEXTURE = "d570bdfe-69a5-e500-bf13-31e36c093634";
@@ -10,8 +10,6 @@ integer SCREEN_FACE = 0;
 integer hasPlayer = FALSE;
 integer MAX_SCORES = 10;
 list highScores = []; 
-
-// Player progress - stores [name, level] pairs
 list playerLevels = [];
 
 FindPrims() {
@@ -20,16 +18,12 @@ FindPrims() {
     SCREEN_LINK = -2; 
     RESET_PRIM_LINK = -1;
     
-    // For single-prim objects, the root prim is link 0 or LINK_THIS
     if (prims == 1) {
-        // Single prim - check if it's named "ekran" or just use it as screen
         string rootName = llStringTrim(llToLower(llGetLinkName(LINK_THIS)), STRING_TRIM);
         if (rootName == "ekran" || rootName == "") {
             SCREEN_LINK = LINK_THIS;
         }
-        llOwnerSay("Tek prim modu. SCREEN_LINK = " + (string)SCREEN_LINK);
     } else {
-        // Multi-prim object - search for named prims
         for(i=0; i<=prims; ++i) {
             string n = llStringTrim(llToLower(llGetLinkName(i)), STRING_TRIM);
             if(n == "ekran") SCREEN_LINK = i;
@@ -37,9 +31,7 @@ FindPrims() {
         }
     }
     
-    // If still not found, try link 0 (root)
     if (SCREEN_LINK == -2) {
-        llOwnerSay("UYARI: 'ekran' adlı prim bulunamadı! Root prim kullanılıyor.");
         SCREEN_LINK = LINK_THIS;
     }
 }
@@ -49,7 +41,7 @@ integer GetPlayerLevel(string playerName) {
     if (idx != -1) {
         return llList2Integer(playerLevels, idx + 1);
     }
-    return 1; // Default to level 1
+    return 1;
 }
 
 SetPlayerLevel(string playerName, integer level) {
@@ -84,24 +76,19 @@ default {
         FindPrims();
         llRequestSecureURL();
         SetStandby();
-        llOwnerSay("Balloon Crush Hazır. Ekran Link: " + (string)SCREEN_LINK);
+        llOwnerSay("Balloon Crush Ready.");
     }
 
     http_request(key id, string method, string body) {
         if (method == URL_REQUEST_GRANTED) {
             my_url = body;
-            llOwnerSay("URL hazır: " + my_url);
         } else if (method == "POST" || method == "GET") {
-            // For GET requests, data is in query string
             string jsonData = body;
             if (method == "GET") {
-                // Extract data from query parameter
                 string query = llGetHTTPHeader(id, "x-query-string");
-                llOwnerSay("GET request: " + query);
                 integer dataStart = llSubStringIndex(query, "data=");
                 if (dataStart != -1) {
                     jsonData = llUnescapeURL(llGetSubString(query, dataStart + 5, -1));
-                    // Remove any trailing parameters
                     integer ampPos = llSubStringIndex(jsonData, "&");
                     if (ampPos != -1) {
                         jsonData = llGetSubString(jsonData, 0, ampPos - 1);
@@ -109,26 +96,21 @@ default {
                 }
             }
             
-            llOwnerSay("Received: " + jsonData);
-            
             string name = llJsonGetValue(jsonData, ["name"]);
             integer newScore = (integer)llJsonGetValue(jsonData, ["score"]);
             integer newLevel = (integer)llJsonGetValue(jsonData, ["level"]);
             
             if(name != JSON_INVALID && name != "") {
-                // Update player level if provided (level complete - DON'T close game)
+                // Update player level
                 if (newLevel > 0) {
                     integer currentLevel = GetPlayerLevel(name);
                     if (newLevel > currentLevel) {
                         SetPlayerLevel(name, newLevel);
-                        llOwnerSay(name + " Level " + (string)newLevel + " tamamladı!");
                     }
                 }
                 
-                // Update high scores - only when game is OVER (score > 0)
+                // Update high scores when game over
                 if (newScore > 0) {
-                    // Search for existing score by this player
-                    // highScores format: [score1, name1, score2, name2, ...]
                     integer found = -1;
                     integer i;
                     integer len = llGetListLength(highScores);
@@ -139,34 +121,25 @@ default {
                     }
                     
                     if (found != -1) {
-                        // Player exists - check if new score is higher
                         integer oldScore = llList2Integer(highScores, found - 1);
                         if (newScore > oldScore) {
-                            // Remove old entry and add new one
                             highScores = llDeleteSubList(highScores, found - 1, found);
                             highScores += [newScore, name];
-                            llOwnerSay("Yeni rekor: " + name + " " + (string)oldScore + " -> " + (string)newScore);
                         }
                     } else {
-                        // New player - add to list
                         highScores += [newScore, name];
-                        llOwnerSay("Yeni oyuncu eklendi: " + name + " = " + (string)newScore);
                     }
                     
-                    // Sort by score (descending) and limit to MAX_SCORES
                     highScores = llListSort(highScores, 2, FALSE);
                     if(llGetListLength(highScores) > MAX_SCORES * 2) {
                         highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
                     }
                     DisplayHighScores();
-                    llOwnerSay(name + " skoru: " + (string)newScore + " (Toplam kayıt: " + (string)(llGetListLength(highScores)/2) + ")");
                     
-                    // Game over - close the game
                     llHTTPResponse(id, 200, "GAMEOVER");
                     llSleep(3.0);
                     SetStandby();
                 } else {
-                    // Level complete only - keep game running
                     llHTTPResponse(id, 200, "OK");
                 }
             } else {
@@ -190,10 +163,6 @@ default {
                 + "&level=" + (string)playerLevel
                 + "&v=" + (string)llGetUnixTime();
             
-            llOwnerSay(user + " için Balloon Crush yükleniyor (Level " + (string)playerLevel + ")...");
-            llOwnerSay("URL: " + url);
-            
-            // Use specific face for media (ALL_SIDES not supported)
             llSetLinkMedia(SCREEN_LINK, SCREEN_FACE, [
                 PRIM_MEDIA_CURRENT_URL, url,
                 PRIM_MEDIA_HOME_URL, url,
@@ -204,8 +173,6 @@ default {
                 PRIM_MEDIA_AUTO_SCALE, TRUE,
                 PRIM_MEDIA_AUTO_ZOOM, TRUE
             ]);
-            
-            llOwnerSay("Media ayarlandı.");
         }
     }
     
