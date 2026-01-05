@@ -96,7 +96,7 @@ default {
             integer newLevel = (integer)llJsonGetValue(body, ["level"]);
             
             if(name != JSON_INVALID) {
-                // Update player level if provided
+                // Update player level if provided (level complete - DON'T close game)
                 if (newLevel > 0) {
                     integer currentLevel = GetPlayerLevel(name);
                     if (newLevel > currentLevel) {
@@ -105,7 +105,7 @@ default {
                     }
                 }
                 
-                // Update high scores
+                // Update high scores - only when game is OVER (score > 0)
                 if (newScore > 0) {
                     integer idx = llListFindList(highScores, [name]);
                     if (idx != -1) {
@@ -122,11 +122,15 @@ default {
                         highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
                     }
                     DisplayHighScores();
+                    
+                    // Game over - close the game
+                    llHTTPResponse(id, 200, "GAMEOVER");
+                    llSleep(3.0);
+                    SetStandby();
+                } else {
+                    // Level complete only - keep game running
+                    llHTTPResponse(id, 200, "OK");
                 }
-                
-                llHTTPResponse(id, 200, "OK");
-                llSleep(2.0); 
-                SetStandby();
             }
         }
     }
