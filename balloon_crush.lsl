@@ -149,8 +149,8 @@ default {
             llOwnerSay(user + " için Balloon Crush yükleniyor (Level " + (string)playerLevel + ")...");
             llOwnerSay("URL: " + url);
             
-            // Try ALL_SIDES to ensure media shows on correct face
-            llSetLinkMedia(SCREEN_LINK, ALL_SIDES, [
+            // Use specific face for media (ALL_SIDES not supported)
+            llSetLinkMedia(SCREEN_LINK, SCREEN_FACE, [
                 PRIM_MEDIA_CURRENT_URL, url,
                 PRIM_MEDIA_HOME_URL, url,
                 PRIM_MEDIA_AUTO_PLAY, TRUE,
