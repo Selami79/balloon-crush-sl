@@ -343,8 +343,16 @@
     <div id="game-wrapper">
         <div id="game"></div>
     </div>
-    <div id="target-info" style="text-align:center;color:#ccc;font-size:20px;margin-top:10px;">Target: <span id="target"
-            style="color:#FFD700;font-size:24px;">500</span> pts</div>
+    <div id="targets-panel" style="
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 10px 0;
+        padding: 10px 20px;
+        background: rgba(0,0,0,0.5);
+        border-radius: 15px;
+        flex-wrap: wrap;
+    "></div>
     <div id="sl-status" style="text-align:center;color:#888;font-size:18px;margin-top:8px;">GUEST PLAYER</div>
     <button id="quit-btn" onclick="quitGame()" style="
         display: block;
@@ -445,24 +453,75 @@
         let isAnimating = false;
         let comboCount = 0;
 
-        // Level configs - Progressive difficulty (easier start, harder later)
+        // ===== TARGET SYSTEM =====
+        let targetProgress = {
+            colors: [0, 0, 0, 0, 0, 0],  // Red, Blue, Green, Yellow, Purple, Orange
+            ice: 0,
+            walls: 0,
+            score: 0
+        };
+
+        const COLOR_NAMES = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
+
+        // Level configs with targets
         function getLevelConfig(lvl) {
-            // Progressive targets: 300, 600, 1000, 1500, 2100, 2800, 3600...
-            const target = 200 + lvl * 100 + (lvl - 1) * lvl * 50;
-            return {
-                target: target,
-                moves: Math.max(15, 35 - lvl * 2),  // 33, 31, 29, 27...
-                iceCount: Math.min(Math.max(0, (lvl - 1) * 3), 20),  // 0, 3, 6, 9...
-                wallCount: lvl >= 4 ? Math.min((lvl - 3) * 2, 12) : 0  // Walls start at level 4
+            const configs = {
+                1: { moves: 35, targets: [{ type: 'score', count: 300 }] },
+                2: { moves: 33, targets: [{ type: 'color', color: 0, count: 15 }] },
+                3: { moves: 31, targets: [{ type: 'color', color: 1, count: 20 }], iceCount: 3 },
+                4: { moves: 30, targets: [{ type: 'ice', count: 5 }], iceCount: 8 },
+                5: { moves: 28, targets: [{ type: 'color', color: 2, count: 25 }, { type: 'score', count: 500 }], iceCount: 6 },
+                6: { moves: 27, targets: [{ type: 'ice', count: 8 }], iceCount: 12 },
+                7: { moves: 26, targets: [{ type: 'wall', count: 3 }], wallCount: 5, iceCount: 5 },
+                8: { moves: 25, targets: [{ type: 'color', color: 3, count: 30 }, { type: 'ice', count: 6 }], iceCount: 10, wallCount: 3 },
+                9: { moves: 24, targets: [{ type: 'wall', count: 5 }, { type: 'score', count: 800 }], wallCount: 8, iceCount: 8 },
+                10: { moves: 23, targets: [{ type: 'color', color: 4, count: 35 }, { type: 'wall', count: 4 }], wallCount: 6, iceCount: 10 }
             };
+
+            // For levels > 10, generate dynamically
+            if (lvl > 10) {
+                const colorIdx = (lvl - 1) % 6;
+                return {
+                    moves: Math.max(18, 25 - Math.floor((lvl - 10) / 2)),
+                    targets: [
+                        { type: 'color', color: colorIdx, count: 25 + lvl * 2 },
+                        { type: 'ice', count: Math.min(lvl, 15) }
+                    ],
+                    iceCount: Math.min(lvl * 2, 20),
+                    wallCount: Math.min(lvl - 5, 12)
+                };
+            }
+
+            return configs[lvl] || configs[1];
+        }
+
+        function resetTargetProgress() {
+            targetProgress = {
+                colors: [0, 0, 0, 0, 0, 0],
+                ice: 0,
+                walls: 0,
+                score: 0
+            };
+        }
+
+        function checkTargetsComplete() {
+            const config = getLevelConfig(level);
+            for (const target of config.targets) {
+                if (target.type === 'color' && targetProgress.colors[target.color] < target.count) return false;
+                if (target.type === 'ice' && targetProgress.ice < target.count) return false;
+                if (target.type === 'wall' && targetProgress.walls < target.count) return false;
+                if (target.type === 'score' && targetProgress.score < target.count) return false;
+            }
+            return true;
         }
 
         // ===== INIT =====
         function init() {
             const config = getLevelConfig(level);
             moves = config.moves;
+            resetTargetProgress();
             createGrid();
-            addObstacles(config.iceCount, config.wallCount);
+            addObstacles(config.iceCount || 0, config.wallCount || 0);
             removeInitialMatches();
             render();
         }
@@ -561,7 +620,52 @@
             document.getElementById('score').textContent = score;
             document.getElementById('moves').textContent = moves;
             document.getElementById('level').textContent = level;
-            document.getElementById('target').textContent = getLevelConfig(level).target;
+
+            // Render targets
+            renderTargets();
+        }
+
+        function renderTargets() {
+            const config = getLevelConfig(level);
+            const panel = document.getElementById('targets-panel');
+            panel.innerHTML = '';
+
+            config.targets.forEach(target => {
+                let icon, current, goal, complete;
+
+                if (target.type === 'color') {
+                    icon = COLOR_NAMES[target.color];
+                    current = targetProgress.colors[target.color];
+                    goal = target.count;
+                } else if (target.type === 'ice') {
+                    icon = '❄️';
+                    current = targetProgress.ice;
+                    goal = target.count;
+                } else if (target.type === 'wall') {
+                    icon = '🧱';
+                    current = targetProgress.walls;
+                    goal = target.count;
+                } else if (target.type === 'score') {
+                    icon = '🏆';
+                    current = targetProgress.score;
+                    goal = target.count;
+                }
+
+                complete = current >= goal;
+                const percent = Math.min(100, (current / goal) * 100);
+
+                const div = document.createElement('div');
+                div.style.cssText = 'text-align:center;min-width:80px;';
+                div.innerHTML = `
+                    <div style="font-size:28px;">${icon}</div>
+                    <div style="color:${complete ? '#2ecc71' : '#fff'};font-size:16px;">${Math.min(current, goal)}/${goal}</div>
+                    <div style="width:100%;height:6px;background:#333;border-radius:3px;margin-top:4px;">
+                        <div style="width:${percent}%;height:100%;background:${complete ? '#2ecc71' : '#f1c40f'};border-radius:3px;transition:width 0.3s;"></div>
+                    </div>
+                    ${complete ? '<div style="color:#2ecc71;font-size:12px;">✓</div>' : ''}
+                `;
+                panel.appendChild(div);
+            });
         }
 
         // ===== CLICK =====
@@ -752,6 +856,8 @@
                                 neighbor.obstacle = OBS_NONE;
                                 neighbor.color = randomColor();
                                 score += 50;
+                                targetProgress.walls++;
+                                targetProgress.score += 50;
                                 playSound('special');
                             } else {
                                 playSound('wall');
@@ -761,7 +867,7 @@
                 });
             });
 
-            // Clear cells (but not walls!)
+            // Clear cells (but not walls!) and track progress
             allCells.forEach(cell => {
                 const tile = grid[cell.r][cell.c];
                 if (tile.obstacle === OBS_WALL) {
@@ -770,10 +876,15 @@
                 if (tile.obstacle === OBS_ICE) {
                     tile.obstacle = OBS_NONE;
                     score += 5;
-                } else {
+                    targetProgress.ice++;
+                    targetProgress.score += 5;
+                } else if (tile.color >= 0) {
+                    // Track color for targets
+                    targetProgress.colors[tile.color]++;
                     tile.color = -1;
                     tile.type = NORMAL;
                     score += 10;
+                    targetProgress.score += 10;
                 }
                 playSound('pop');
             });
@@ -873,7 +984,9 @@
 
         function checkGameState() {
             const config = getLevelConfig(level);
-            if (score >= config.target) {
+
+            // Check if all targets are complete
+            if (checkTargetsComplete()) {
                 playSound('levelup');
                 level++;
                 // Submit level to SL
