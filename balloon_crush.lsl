@@ -127,22 +127,39 @@ default {
                 
                 // Update high scores - only when game is OVER (score > 0)
                 if (newScore > 0) {
-                    integer idx = llListFindList(highScores, [name]);
-                    if (idx != -1) {
-                        integer oldScore = llList2Integer(highScores, idx - 1);
+                    // Search for existing score by this player
+                    // highScores format: [score1, name1, score2, name2, ...]
+                    integer found = -1;
+                    integer i;
+                    integer len = llGetListLength(highScores);
+                    for (i = 1; i < len; i += 2) {
+                        if (llList2String(highScores, i) == name) {
+                            found = i;
+                        }
+                    }
+                    
+                    if (found != -1) {
+                        // Player exists - check if new score is higher
+                        integer oldScore = llList2Integer(highScores, found - 1);
                         if (newScore > oldScore) {
-                            highScores = llDeleteSubList(highScores, idx - 1, idx);
+                            // Remove old entry and add new one
+                            highScores = llDeleteSubList(highScores, found - 1, found);
                             highScores += [newScore, name];
+                            llOwnerSay("Yeni rekor: " + name + " " + (string)oldScore + " -> " + (string)newScore);
                         }
                     } else {
+                        // New player - add to list
                         highScores += [newScore, name];
+                        llOwnerSay("Yeni oyuncu eklendi: " + name + " = " + (string)newScore);
                     }
+                    
+                    // Sort by score (descending) and limit to MAX_SCORES
                     highScores = llListSort(highScores, 2, FALSE);
                     if(llGetListLength(highScores) > MAX_SCORES * 2) {
                         highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
                     }
                     DisplayHighScores();
-                    llOwnerSay(name + " skoru: " + (string)newScore);
+                    llOwnerSay(name + " skoru: " + (string)newScore + " (Toplam kayıt: " + (string)(llGetListLength(highScores)/2) + ")");
                     
                     // Game over - close the game
                     llHTTPResponse(id, 200, "GAMEOVER");
