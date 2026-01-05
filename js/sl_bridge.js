@@ -61,12 +61,12 @@ window.submitLevelToSL = function (lvl) {
 
 // Called when game ends with score
 window.submitScoreToSL = function (sc, lvl) {
+    console.log("submitScoreToSL called: score=" + sc + ", level=" + lvl + ", slUrl=" + (slUrl ? "yes" : "no"));
+
     if (!slUrl) {
         console.warn("No SL URL found, cannot submit score.");
         return;
     }
-
-    if (playerName === "GUEST") return;
 
     fetch(slUrl, {
         method: 'POST',

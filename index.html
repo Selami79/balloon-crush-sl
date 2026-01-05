@@ -889,9 +889,10 @@
         // ===== QUIT GAME =====
         function quitGame() {
             if (confirm('🚪 Quit game?\nYour score (' + score + ') will be saved.')) {
-                // Submit final score to SL
-                if (window.submitScoreToSL && score > 0) {
-                    window.submitScoreToSL(score, level);
+                // Always submit score to SL (even if 0, to trigger close)
+                if (window.submitScoreToSL) {
+                    // Send at least 1 point to trigger the close
+                    window.submitScoreToSL(Math.max(score, 1), level);
                 }
                 alert('👋 Thanks for playing!\nFinal Score: ' + score + '\nLevel: ' + level);
                 // Reset game
