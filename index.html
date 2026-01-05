@@ -354,29 +354,36 @@
         "></div>
 
         <!-- MIDDLE: Game with side info -->
-        <div style="display: flex; align-items: center; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 25px;">
             <!-- LEFT: Score, Moves, Level -->
             <div id="left-panel" style="
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 20px;
-                padding: 20px;
-                background: rgba(0,0,0,0.5);
-                border-radius: 20px;
-                min-width: 120px;
+                gap: 25px;
+                padding: 25px;
+                background: linear-gradient(135deg, rgba(50,50,80,0.8) 0%, rgba(30,30,50,0.9) 100%);
+                border-radius: 25px;
+                min-width: 140px;
+                border: 2px solid rgba(255,215,0,0.3);
             ">
                 <div style="text-align:center;">
-                    <div style="color:#888;font-size:14px;">🏆 SCORE</div>
-                    <div id="score" style="color:#FFD700;font-size:28px;font-weight:bold;">0</div>
+                    <div style="color:#FFD700;font-size:18px;">🏆 SCORE</div>
+                    <div id="score"
+                        style="color:#FFD700;font-size:36px;font-weight:bold;text-shadow:0 0 10px rgba(255,215,0,0.5);">
+                        0</div>
                 </div>
                 <div style="text-align:center;">
-                    <div style="color:#888;font-size:14px;">🎯 MOVES</div>
-                    <div id="moves" style="color:#fff;font-size:28px;font-weight:bold;">30</div>
+                    <div style="color:#3498db;font-size:18px;">🎯 MOVES</div>
+                    <div id="moves"
+                        style="color:#3498db;font-size:36px;font-weight:bold;text-shadow:0 0 10px rgba(52,152,219,0.5);">
+                        30</div>
                 </div>
                 <div style="text-align:center;">
-                    <div style="color:#888;font-size:14px;">⭐ LEVEL</div>
-                    <div id="level" style="color:#fff;font-size:28px;font-weight:bold;">1</div>
+                    <div style="color:#2ecc71;font-size:18px;">⭐ LEVEL</div>
+                    <div id="level"
+                        style="color:#2ecc71;font-size:36px;font-weight:bold;text-shadow:0 0 10px rgba(46,204,113,0.5);">
+                        1</div>
                 </div>
             </div>
 
@@ -390,22 +397,25 @@
         <div id="bottom-panel" style="
             display: flex;
             align-items: center;
-            gap: 30px;
-            padding: 12px 30px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 20px;
+            gap: 40px;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, rgba(50,50,80,0.8) 0%, rgba(30,30,50,0.9) 100%);
+            border-radius: 25px;
+            border: 2px solid rgba(255,215,0,0.3);
         ">
-            <div id="sl-status" style="color:#FFD700;font-size:22px;font-weight:bold;">🎮 GUEST</div>
+            <div id="sl-status"
+                style="color:#FFD700;font-size:28px;font-weight:bold;text-shadow:0 0 10px rgba(255,215,0,0.5);">🎮 GUEST
+            </div>
             <button id="quit-btn" onclick="quitGame()" style="
-                padding: 12px 30px;
-                font-size: 18px;
+                padding: 15px 40px;
+                font-size: 22px;
                 font-family: 'Fredoka One', sans-serif;
                 background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
                 color: white;
                 border: none;
-                border-radius: 25px;
+                border-radius: 30px;
                 cursor: pointer;
-                box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+                box-shadow: 0 4px 20px rgba(231, 76, 60, 0.5);
             ">🚪 Quit & Save</button>
         </div>
     </div>
