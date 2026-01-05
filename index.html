@@ -248,6 +248,27 @@
             text-shadow: 0 0 10px #00ffff;
         }
 
+        /* Wall obstacle - Unbreakable */
+        .wall {
+            background: linear-gradient(135deg, #8B4513 0%, #5D3A1A 50%, #3D2510 100%) !important;
+            border: 3px solid #2a1a0a;
+            border-radius: 8px !important;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .wall::before {
+            content: '🧱';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 26px;
+        }
+
+        .wall::after {
+            display: none !important;
+        }
+
         #target-info {
             text-align: center;
             color: #aaa;
@@ -307,7 +328,7 @@
         // ===== CONFIG =====
         const COLS = 8, ROWS = 8, COLORS = 6;
         const NORMAL = 0, STRIPED_H = 1, STRIPED_V = 2, BOMB = 3, COLOR_BOMB = 4;
-        const OBS_NONE = 0, OBS_ICE = 1;
+        const OBS_NONE = 0, OBS_ICE = 1, OBS_WALL = 2;
 
         // ===== AUDIO =====
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -378,12 +399,13 @@
         let isAnimating = false;
         let comboCount = 0;
 
-        // Level configs - More challenging
+        // Level configs - Very challenging
         function getLevelConfig(lvl) {
             return {
-                target: 800 + lvl * 400,  // Higher targets
-                moves: Math.max(20, 35 - lvl),  // Slower move reduction
-                iceCount: Math.min(lvl * 3, 20)  // More ice
+                target: 1000 + lvl * 500,  // Even higher targets
+                moves: Math.max(18, 30 - lvl),  // Fewer moves
+                iceCount: Math.min(lvl * 4, 24),  // More ice
+                wallCount: lvl >= 3 ? Math.min((lvl - 2) * 2, 10) : 0  // Walls start at level 3
             };
         }
 
@@ -392,7 +414,7 @@
             const config = getLevelConfig(level);
             moves = config.moves;
             createGrid();
-            addObstacles(config.iceCount);
+            addObstacles(config.iceCount, config.wallCount);
             removeInitialMatches();
             render();
         }
@@ -407,14 +429,26 @@
             }
         }
 
-        function addObstacles(count) {
-            let placed = 0;
-            while (placed < count) {
+        function addObstacles(iceCount, wallCount) {
+            // Add walls first (not on edges to allow gravity)
+            let wallsPlaced = 0;
+            while (wallsPlaced < wallCount) {
+                const r = 1 + Math.floor(Math.random() * (ROWS - 2));
+                const c = Math.floor(Math.random() * COLS);
+                if (grid[r][c].obstacle === OBS_NONE) {
+                    grid[r][c].obstacle = OBS_WALL;
+                    grid[r][c].color = -1;  // Walls have no color
+                    wallsPlaced++;
+                }
+            }
+            // Add ice
+            let icePlaced = 0;
+            while (icePlaced < iceCount) {
                 const r = Math.floor(Math.random() * ROWS);
                 const c = Math.floor(Math.random() * COLS);
                 if (grid[r][c].obstacle === OBS_NONE) {
                     grid[r][c].obstacle = OBS_ICE;
-                    placed++;
+                    icePlaced++;
                 }
             }
         }
@@ -450,7 +484,9 @@
                     const tile = grid[r][c];
                     const cell = document.createElement('div');
 
-                    if (tile.type === COLOR_BOMB) {
+                    if (tile.obstacle === OBS_WALL) {
+                        cell.className = 'cell wall';
+                    } else if (tile.type === COLOR_BOMB) {
                         cell.className = 'cell color-bomb';
                     } else {
                         cell.className = `cell color${tile.color}`;
@@ -465,7 +501,10 @@
                         cell.classList.add('selected');
                     }
 
-                    cell.onclick = () => { initAudio(); onCellClick(r, c); };
+                    // Walls are not clickable
+                    if (tile.obstacle !== OBS_WALL) {
+                        cell.onclick = () => { initAudio(); onCellClick(r, c); };
+                    }
                     gameEl.appendChild(cell);
                 }
             }
@@ -644,9 +683,13 @@
                 }
             });
 
-            // Clear cells
+            // Clear cells (but not walls!)
             allCells.forEach(cell => {
                 const tile = grid[cell.r][cell.c];
+                if (tile.obstacle === OBS_WALL) {
+                    // Walls cannot be destroyed
+                    return;
+                }
                 if (tile.obstacle === OBS_ICE) {
                     tile.obstacle = OBS_NONE;
                     score += 5;
@@ -684,21 +727,48 @@
 
         // ===== GRAVITY =====
         function applyGravity() {
+            // Process each column
             for (let c = 0; c < COLS; c++) {
-                let writeRow = ROWS - 1;
+                // Work in segments separated by walls
+                let segmentBottom = ROWS - 1;
 
-                for (let r = ROWS - 1; r >= 0; r--) {
-                    if (grid[r][c].color !== -1) {
-                        if (writeRow !== r) {
-                            grid[writeRow][c] = grid[r][c];
-                            grid[r][c] = { color: -1, type: NORMAL, obstacle: OBS_NONE };
-                        }
-                        writeRow--;
+                while (segmentBottom >= 0) {
+                    // Find the top of current segment (stop at wall or top)
+                    let segmentTop = segmentBottom;
+                    while (segmentTop > 0 && grid[segmentTop - 1][c].obstacle !== OBS_WALL) {
+                        segmentTop--;
                     }
-                }
 
-                for (let r = writeRow; r >= 0; r--) {
-                    grid[r][c] = { color: randomColor(), type: NORMAL, obstacle: OBS_NONE };
+                    // Now process this segment [segmentTop, segmentBottom]
+                    let writeRow = segmentBottom;
+
+                    for (let r = segmentBottom; r >= segmentTop; r--) {
+                        const tile = grid[r][c];
+                        if (tile.obstacle === OBS_WALL) {
+                            // Wall stays in place, reset writeRow above it
+                            writeRow = r - 1;
+                        } else if (tile.color !== -1) {
+                            if (writeRow !== r) {
+                                grid[writeRow][c] = tile;
+                                grid[r][c] = { color: -1, type: NORMAL, obstacle: OBS_NONE };
+                            }
+                            writeRow--;
+                        }
+                    }
+
+                    // Fill empty spaces in this segment with new tiles
+                    for (let r = writeRow; r >= segmentTop; r--) {
+                        if (grid[r][c].obstacle !== OBS_WALL) {
+                            grid[r][c] = { color: randomColor(), type: NORMAL, obstacle: OBS_NONE };
+                        }
+                    }
+
+                    // Move to segment above current top
+                    segmentBottom = segmentTop - 1;
+                    // Skip if we hit a wall
+                    while (segmentBottom >= 0 && grid[segmentBottom][c].obstacle === OBS_WALL) {
+                        segmentBottom--;
+                    }
                 }
             }
 
