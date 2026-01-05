@@ -1,4 +1,4 @@
-// SECOND LIFE BRIDGE FOR BALLOON CRUSH v2
+// SECOND LIFE BRIDGE FOR BALLOON CRUSH v3
 // Handles player name, level sync, and score submission
 
 function getUrlParameter(name) {
@@ -12,10 +12,13 @@ let playerName = "GUEST";
 let slUrl = "";
 let startLevel = 1;
 
-document.addEventListener('DOMContentLoaded', function () {
+// Run immediately since DOM is already loaded when this script runs
+(function () {
     const p = getUrlParameter('player');
     const u = getUrlParameter('sl_url');
     const l = getUrlParameter('level');
+
+    console.log("SL Bridge: player=" + p + ", url=" + (u ? "yes" : "no") + ", level=" + l);
 
     if (p && p !== "") {
         playerName = p;
@@ -23,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (statusEl) {
             statusEl.innerText = "🎮 " + playerName;
             statusEl.style.color = "#FFD700";
+            statusEl.style.fontWeight = "bold";
+        } else {
+            console.warn("sl-status element not found!");
         }
     }
 
@@ -32,31 +38,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (l && l !== "" && parseInt(l) > 0) {
         startLevel = parseInt(l);
-        // Set the level in the game
-        if (typeof currentLevel !== 'undefined') {
-            currentLevel = startLevel;
+        if (typeof level !== 'undefined') {
+            level = startLevel;
         }
-        // Also save to localStorage as backup
         localStorage.setItem('balloonCrush_level', startLevel.toString());
     }
 
-    console.log("SL Bridge Init: " + playerName + " at Level " + startLevel);
-});
+    console.log("SL Bridge Init Complete: " + playerName + " at Level " + startLevel);
+})();
 
 // Called when player wins a level
-window.submitLevelToSL = function (level) {
+window.submitLevelToSL = function (lvl) {
     if (!slUrl || playerName === "GUEST") return;
 
     fetch(slUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ name: playerName, level: level, score: 0 })
+        body: JSON.stringify({ name: playerName, level: lvl, score: 0 })
     }).catch(err => console.error(err));
 };
 
 // Called when game ends with score
-window.submitScoreToSL = function (score, level) {
+window.submitScoreToSL = function (sc, lvl) {
     if (!slUrl) {
         console.warn("No SL URL found, cannot submit score.");
         return;
@@ -68,10 +72,10 @@ window.submitScoreToSL = function (score, level) {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ name: playerName, score: score, level: level || 1 })
+        body: JSON.stringify({ name: playerName, score: sc, level: lvl || 1 })
     })
         .then(() => {
-            console.log("Score sent to SL: " + score);
+            console.log("Score sent to SL: " + sc);
         })
         .catch(err => {
             console.error(err);
@@ -81,4 +85,9 @@ window.submitScoreToSL = function (score, level) {
 // Export startLevel for game.js to use
 window.getStartLevel = function () {
     return startLevel;
+};
+
+// Export player name
+window.getPlayerName = function () {
+    return playerName;
 };
