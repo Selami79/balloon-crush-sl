@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Balloon Crush</title>
+    <title>🎈 Balloon Crush</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,99 +14,223 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(180deg, #1a0533 0%, #2d1b4e 50%, #1a0533 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Fredoka One', 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Animated background stars */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, #fff, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255, 255, 255, 0.9), transparent),
+                radial-gradient(1px 1px at 230px 80px, #fff, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255, 255, 255, 0.7), transparent);
+            background-size: 350px 200px;
+            animation: twinkle 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
         }
 
         #header {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px 30px;
-            border-radius: 15px;
-            margin-bottom: 10px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 140, 0, 0.2) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            padding: 15px 40px;
+            border-radius: 20px;
+            margin-bottom: 15px;
             display: flex;
-            gap: 40px;
+            gap: 50px;
             color: white;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        #header div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         #header span {
             color: #FFD700;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        #game-wrapper {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            padding: 15px;
+            border-radius: 25px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow:
+                0 0 40px rgba(138, 43, 226, 0.3),
+                inset 0 0 30px rgba(255, 255, 255, 0.05);
         }
 
         #game {
             display: grid;
-            grid-template-columns: repeat(8, 50px);
-            grid-template-rows: repeat(8, 50px);
-            gap: 2px;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px;
+            grid-template-columns: repeat(8, 52px);
+            grid-template-rows: repeat(8, 52px);
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
             border-radius: 15px;
         }
 
         .cell {
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             cursor: pointer;
-            transition: transform 0.15s, opacity 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Balloon shine effect */
+        .cell::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            width: 12px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            transform: rotate(-30deg);
+        }
+
+        /* Balloon knot */
+        .cell::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 6px;
+            background: inherit;
+            filter: brightness(0.7);
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
         }
 
         .cell:hover {
-            transform: scale(1.1);
+            transform: scale(1.15) translateY(-5px);
+            box-shadow:
+                0 8px 20px rgba(0, 0, 0, 0.4),
+                0 0 20px currentColor;
         }
 
         .cell.selected {
-            transform: scale(1.15);
-            box-shadow: 0 0 15px white;
+            transform: scale(1.2) translateY(-8px);
+            animation: bounce 0.5s ease infinite;
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.5),
+                0 0 30px currentColor,
+                0 0 60px currentColor;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: scale(1.2) translateY(-8px);
+            }
+
+            50% {
+                transform: scale(1.25) translateY(-12px);
+            }
         }
 
         .cell.matched {
-            transform: scale(0);
+            transform: scale(0) rotate(180deg);
             opacity: 0;
         }
 
+        /* Premium Balloon Colors */
         .color0 {
-            background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b);
+            background: radial-gradient(circle at 35% 25%, #ff8a8a 0%, #ff4757 50%, #c0392b 100%);
+            color: #ff4757;
         }
 
         .color1 {
-            background: radial-gradient(circle at 30% 30%, #74b9ff, #0984e3);
+            background: radial-gradient(circle at 35% 25%, #74b9ff 0%, #0984e3 50%, #0652DD 100%);
+            color: #0984e3;
         }
 
         .color2 {
-            background: radial-gradient(circle at 30% 30%, #55efc4, #00b894);
+            background: radial-gradient(circle at 35% 25%, #7bed9f 0%, #2ed573 50%, #05c46b 100%);
+            color: #2ed573;
         }
 
         .color3 {
-            background: radial-gradient(circle at 30% 30%, #ffeaa7, #fdcb6e);
+            background: radial-gradient(circle at 35% 25%, #fff48a 0%, #ffc312 50%, #f39c12 100%);
+            color: #ffc312;
         }
 
         .color4 {
-            background: radial-gradient(circle at 30% 30%, #a29bfe, #6c5ce7);
+            background: radial-gradient(circle at 35% 25%, #d6a4ff 0%, #9b59b6 50%, #8e44ad 100%);
+            color: #9b59b6;
         }
 
         .color5 {
-            background: radial-gradient(circle at 30% 30%, #fd79a8, #e84393);
+            background: radial-gradient(circle at 35% 25%, #ffb8d0 0%, #fd79a8 50%, #e84393 100%);
+            color: #fd79a8;
+        }
+
+        /* Target info */
+        #target-info {
+            text-align: center;
+            color: #aaa;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        #target-info span {
+            color: #FFD700;
+            font-size: 16px;
         }
     </style>
 </head>
 
 <body>
     <div id="header">
-        <div>SCORE: <span id="score">0</span></div>
-        <div>MOVES: <span id="moves">30</span></div>
-        <div>LEVEL: <span id="level">1</span></div>
+        <div>🏆 <span id="score">0</span></div>
+        <div>🎯 <span id="moves">30</span></div>
+        <div>⭐ <span id="level">1</span></div>
     </div>
-    <div id="game"></div>
+    <div id="game-wrapper">
+        <div id="game"></div>
+    </div>
+    <div id="target-info">Target: <span id="target">500</span> pts</div>
 
     <script>
         // ===== GAME CONFIG =====
@@ -144,16 +269,16 @@
 
         function removeInitialMatches() {
             let hasMatches = true;
-            while (hasMatches) {
+            let iterations = 0;
+            while (hasMatches && iterations < 100) {
                 hasMatches = false;
+                iterations++;
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
-                        // Check horizontal
                         if (c >= 2 && grid[r][c] === grid[r][c - 1] && grid[r][c] === grid[r][c - 2]) {
                             grid[r][c] = (grid[r][c] + 1) % COLORS;
                             hasMatches = true;
                         }
-                        // Check vertical
                         if (r >= 2 && grid[r][c] === grid[r - 1][c] && grid[r][c] === grid[r - 2][c]) {
                             grid[r][c] = (grid[r][c] + 1) % COLORS;
                             hasMatches = true;
@@ -187,6 +312,7 @@
             document.getElementById('score').textContent = score;
             document.getElementById('moves').textContent = moves;
             document.getElementById('level').textContent = level;
+            document.getElementById('target').textContent = level * 500;
         }
 
         // ===== CLICK HANDLER =====
@@ -200,7 +326,6 @@
                 const dr = Math.abs(r - selected.r);
                 const dc = Math.abs(c - selected.c);
 
-                // Adjacent check
                 if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
                     trySwap(selected.r, selected.c, r, c);
                 }
@@ -211,7 +336,6 @@
 
         // ===== SWAP =====
         function trySwap(r1, c1, r2, c2) {
-            // Swap
             swap(r1, c1, r2, c2);
 
             const matches = findMatches();
@@ -219,7 +343,6 @@
                 moves--;
                 processMatches(matches);
             } else {
-                // Swap back
                 swap(r1, c1, r2, c2);
             }
         }
@@ -234,7 +357,6 @@
         function findMatches() {
             const matched = new Set();
 
-            // Horizontal
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS - 2; c++) {
                     if (grid[r][c] === grid[r][c + 1] && grid[r][c] === grid[r][c + 2]) {
@@ -245,7 +367,6 @@
                 }
             }
 
-            // Vertical
             for (let r = 0; r < ROWS - 2; r++) {
                 for (let c = 0; c < COLS; c++) {
                     if (grid[r][c] === grid[r + 1][c] && grid[r][c] === grid[r + 2][c]) {
@@ -266,7 +387,6 @@
         function processMatches(matches) {
             isAnimating = true;
 
-            // Mark as -1 (empty)
             matches.forEach(m => {
                 grid[m.r][m.c] = -1;
             });
@@ -274,7 +394,6 @@
             score += matches.length * 10;
             render();
 
-            // After animation, apply gravity
             setTimeout(() => {
                 applyGravity();
             }, 200);
@@ -282,11 +401,9 @@
 
         // ===== GRAVITY =====
         function applyGravity() {
-            // For each column, drop tiles down
             for (let c = 0; c < COLS; c++) {
                 let writeRow = ROWS - 1;
 
-                // Move existing tiles down
                 for (let r = ROWS - 1; r >= 0; r--) {
                     if (grid[r][c] !== -1) {
                         grid[writeRow][c] = grid[r][c];
@@ -297,7 +414,6 @@
                     }
                 }
 
-                // Fill empty spaces at top with new colors
                 for (let r = writeRow; r >= 0; r--) {
                     grid[r][c] = randomColor();
                 }
@@ -305,7 +421,6 @@
 
             render();
 
-            // Check for chain matches
             setTimeout(() => {
                 const newMatches = findMatches();
                 if (newMatches.length > 0) {
@@ -319,19 +434,21 @@
 
         // ===== GAME STATE =====
         function checkGameState() {
-            if (score >= level * 500) {
+            const target = level * 500;
+            if (score >= target) {
                 level++;
                 moves += 10;
-                alert('Level Complete! 🎉');
+                alert('🎉 Level ' + (level - 1) + ' Complete!');
+                render();
             } else if (moves <= 0) {
-                alert('Game Over! Score: ' + score);
+                alert('💔 Game Over!\nScore: ' + score);
                 score = 0;
                 moves = 30;
                 level = 1;
                 createGrid();
                 removeInitialMatches();
+                render();
             }
-            render();
         }
 
         // ===== START =====
