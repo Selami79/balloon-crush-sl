@@ -59,12 +59,11 @@ let startLevel = 1;
 window.submitLevelToSL = function (lvl) {
     if (!slUrl || playerName === "GUEST") return;
 
-    fetch(slUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ name: playerName, level: lvl, score: 0 })
-    }).catch(err => console.error(err));
+    // Use image beacon - works in SL browser
+    const data = JSON.stringify({ name: playerName, level: lvl, score: 0 });
+    const img = new Image();
+    img.src = slUrl + "?data=" + encodeURIComponent(data);
+    console.log("Level sent via beacon");
 };
 
 // Called when game ends with score
@@ -76,18 +75,17 @@ window.submitScoreToSL = function (sc, lvl) {
         return;
     }
 
-    fetch(slUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ name: playerName, score: sc, level: lvl || 1 })
-    })
-        .then(() => {
-            console.log("Score sent to SL: " + sc);
-        })
-        .catch(err => {
-            console.error(err);
-        });
+    // Use image beacon - works in SL browser  
+    const data = JSON.stringify({ name: playerName, score: sc, level: lvl || 1 });
+    const img = new Image();
+    img.src = slUrl + "?data=" + encodeURIComponent(data);
+    img.onload = function () {
+        console.log("Score sent to SL: " + sc);
+    };
+    img.onerror = function () {
+        // Even if image fails, the request was sent
+        console.log("Score beacon sent (may have succeeded)");
+    };
 };
 
 // Export startLevel for game.js to use

@@ -90,12 +90,32 @@ default {
     http_request(key id, string method, string body) {
         if (method == URL_REQUEST_GRANTED) {
             my_url = body;
-        } else if (method == "POST") {
-            string name = llJsonGetValue(body, ["name"]);
-            integer newScore = (integer)llJsonGetValue(body, ["score"]);
-            integer newLevel = (integer)llJsonGetValue(body, ["level"]);
+            llOwnerSay("URL hazır: " + my_url);
+        } else if (method == "POST" || method == "GET") {
+            // For GET requests, data is in query string
+            string jsonData = body;
+            if (method == "GET") {
+                // Extract data from query parameter
+                string query = llGetHTTPHeader(id, "x-query-string");
+                llOwnerSay("GET request: " + query);
+                integer dataStart = llSubStringIndex(query, "data=");
+                if (dataStart != -1) {
+                    jsonData = llUnescapeURL(llGetSubString(query, dataStart + 5, -1));
+                    // Remove any trailing parameters
+                    integer ampPos = llSubStringIndex(jsonData, "&");
+                    if (ampPos != -1) {
+                        jsonData = llGetSubString(jsonData, 0, ampPos - 1);
+                    }
+                }
+            }
             
-            if(name != JSON_INVALID) {
+            llOwnerSay("Received: " + jsonData);
+            
+            string name = llJsonGetValue(jsonData, ["name"]);
+            integer newScore = (integer)llJsonGetValue(jsonData, ["score"]);
+            integer newLevel = (integer)llJsonGetValue(jsonData, ["level"]);
+            
+            if(name != JSON_INVALID && name != "") {
                 // Update player level if provided (level complete - DON'T close game)
                 if (newLevel > 0) {
                     integer currentLevel = GetPlayerLevel(name);
@@ -122,6 +142,7 @@ default {
                         highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
                     }
                     DisplayHighScores();
+                    llOwnerSay(name + " skoru: " + (string)newScore);
                     
                     // Game over - close the game
                     llHTTPResponse(id, 200, "GAMEOVER");
@@ -131,6 +152,8 @@ default {
                     // Level complete only - keep game running
                     llHTTPResponse(id, 200, "OK");
                 }
+            } else {
+                llHTTPResponse(id, 200, "OK");
             }
         }
     }
