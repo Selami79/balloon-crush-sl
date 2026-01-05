@@ -19,6 +19,7 @@ let startLevel = 1;
     const l = getUrlParameter('level');
 
     console.log("SL Bridge: player=" + p + ", url=" + (u ? "yes" : "no") + ", level=" + l);
+    console.log("Full URL: " + window.location.href);
 
     if (p && p !== "") {
         playerName = p;
@@ -27,13 +28,20 @@ let startLevel = 1;
             statusEl.innerText = "🎮 " + playerName;
             statusEl.style.color = "#FFD700";
             statusEl.style.fontWeight = "bold";
-        } else {
-            console.warn("sl-status element not found!");
         }
     }
 
     if (u && u !== "") {
         slUrl = u;
+        console.log("SL URL received: " + slUrl.substring(0, 50) + "...");
+    } else {
+        console.warn("NO SL URL! Player cannot submit scores.");
+        // Show warning on screen
+        const statusEl = document.getElementById('sl-status');
+        if (statusEl && playerName === "GUEST") {
+            statusEl.innerText = "⚠️ No SL connection";
+            statusEl.style.color = "#ff6b6b";
+        }
     }
 
     if (l && l !== "" && parseInt(l) > 0) {
@@ -44,7 +52,7 @@ let startLevel = 1;
         localStorage.setItem('balloonCrush_level', startLevel.toString());
     }
 
-    console.log("SL Bridge Init Complete: " + playerName + " at Level " + startLevel);
+    console.log("SL Bridge Init Complete: " + playerName + " at Level " + startLevel + ", hasUrl=" + (slUrl ? "yes" : "no"));
 })();
 
 // Called when player wins a level
