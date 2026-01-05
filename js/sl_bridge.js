@@ -19,7 +19,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (p && p !== "") {
         playerName = p;
-        document.getElementById('sl-status').innerText = "PLAYER: " + playerName;
+        const statusEl = document.getElementById('sl-status');
+        if (statusEl) {
+            statusEl.innerText = "🎮 " + playerName;
+            statusEl.style.color = "#FFD700";
+        }
     }
 
     if (u && u !== "") {
