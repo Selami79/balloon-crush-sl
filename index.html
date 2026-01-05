@@ -248,7 +248,7 @@
             text-shadow: 0 0 10px #00ffff;
         }
 
-        /* Wall obstacle - Unbreakable */
+        /* Wall obstacle - 2 hits to break */
         .wall {
             background: linear-gradient(135deg, #8B4513 0%, #5D3A1A 50%, #3D2510 100%) !important;
             border: 3px solid #2a1a0a;
@@ -266,6 +266,27 @@
         }
 
         .wall::after {
+            display: none !important;
+        }
+
+        /* Cracked wall - 1 hit left */
+        .wall-cracked {
+            background: linear-gradient(135deg, #6B3513 0%, #4D2A1A 50%, #2D1510 100%) !important;
+            border: 3px solid #1a0a0a;
+            border-radius: 8px !important;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .wall-cracked::before {
+            content: '💥';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+
+        .wall-cracked::after {
             display: none !important;
         }
 
@@ -389,6 +410,14 @@
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
                     osc.start(now); osc.stop(now + 0.05);
                     break;
+                case 'wall':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now); osc.stop(now + 0.15);
+                    break;
             }
         }
 
@@ -437,7 +466,8 @@
                 const c = Math.floor(Math.random() * COLS);
                 if (grid[r][c].obstacle === OBS_NONE) {
                     grid[r][c].obstacle = OBS_WALL;
-                    grid[r][c].color = -1;  // Walls have no color
+                    grid[r][c].wallHp = 2;  // 2 hits to destroy
+                    grid[r][c].color = -1;
                     wallsPlaced++;
                 }
             }
@@ -485,7 +515,7 @@
                     const cell = document.createElement('div');
 
                     if (tile.obstacle === OBS_WALL) {
-                        cell.className = 'cell wall';
+                        cell.className = tile.wallHp === 1 ? 'cell wall-cracked' : 'cell wall';
                     } else if (tile.type === COLOR_BOMB) {
                         cell.className = 'cell color-bomb';
                     } else {
@@ -683,11 +713,39 @@
                 }
             });
 
+            // Damage adjacent walls
+            const damagedWalls = new Set();
+            allCells.forEach(cell => {
+                // Check all 4 neighbors for walls
+                const neighbors = [
+                    { r: cell.r - 1, c: cell.c },
+                    { r: cell.r + 1, c: cell.c },
+                    { r: cell.r, c: cell.c - 1 },
+                    { r: cell.r, c: cell.c + 1 }
+                ];
+                neighbors.forEach(n => {
+                    if (n.r >= 0 && n.r < ROWS && n.c >= 0 && n.c < COLS) {
+                        const neighbor = grid[n.r][n.c];
+                        if (neighbor.obstacle === OBS_WALL && !damagedWalls.has(`${n.r},${n.c}`)) {
+                            damagedWalls.add(`${n.r},${n.c}`);
+                            neighbor.wallHp--;
+                            if (neighbor.wallHp <= 0) {
+                                neighbor.obstacle = OBS_NONE;
+                                neighbor.color = randomColor();
+                                score += 50;
+                                playSound('special');
+                            } else {
+                                playSound('wall');
+                            }
+                        }
+                    }
+                });
+            });
+
             // Clear cells (but not walls!)
             allCells.forEach(cell => {
                 const tile = grid[cell.r][cell.c];
                 if (tile.obstacle === OBS_WALL) {
-                    // Walls cannot be destroyed
                     return;
                 }
                 if (tile.obstacle === OBS_ICE) {
