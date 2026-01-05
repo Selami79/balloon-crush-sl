@@ -88,22 +88,22 @@
 
         #game {
             display: grid;
-            grid-template-columns: repeat(8, 60px);
-            grid-template-rows: repeat(8, 60px);
-            gap: 4px;
+            grid-template-columns: repeat(8, 72px);
+            grid-template-rows: repeat(8, 72px);
+            gap: 5px;
             background: rgba(0, 0, 0, 0.3);
-            padding: 8px;
-            border-radius: 15px;
+            padding: 10px;
+            border-radius: 18px;
         }
 
         .cell {
-            width: 60px;
-            height: 60px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.15s ease;
             position: relative;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -3px 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3), inset 0 -4px 6px rgba(0, 0, 0, 0.2);
         }
 
         .cell::before {
