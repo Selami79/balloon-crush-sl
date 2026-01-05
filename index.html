@@ -734,15 +734,113 @@
             const tile1 = grid[r1][c1];
             const tile2 = grid[r2][c2];
 
-            // Color Bomb activation
-            if (tile1.type === COLOR_BOMB || tile2.type === COLOR_BOMB) {
-                moves--;
-                const colorBombTile = tile1.type === COLOR_BOMB ? tile1 : tile2;
-                const otherTile = tile1.type === COLOR_BOMB ? tile2 : tile1;
-                const targetColor = otherTile.color;
+            // Helper to clear cells
+            function clearCells(cells) {
+                cells.forEach(cell => {
+                    if (cell.r >= 0 && cell.r < ROWS && cell.c >= 0 && cell.c < COLS) {
+                        const tile = grid[cell.r][cell.c];
+                        if (tile.obstacle === OBS_WALL) return;
+                        if (tile.color >= 0) {
+                            targetProgress.colors[tile.color]++;
+                            targetProgress.score += 10;
+                        }
+                        tile.color = -1;
+                        tile.type = NORMAL;
+                        score += 10;
+                    }
+                });
+                playSound('special');
+            }
 
-                // Clear all balloons of target color
+            const t1 = tile1.type, t2 = tile2.type;
+            const isSpecial1 = t1 === STRIPED_H || t1 === STRIPED_V || t1 === BOMB || t1 === COLOR_BOMB;
+            const isSpecial2 = t2 === STRIPED_H || t2 === STRIPED_V || t2 === BOMB || t2 === COLOR_BOMB;
+
+            // Special + Special combinations
+            if (isSpecial1 && isSpecial2) {
+                moves--;
+                isAnimating = true;
                 const cellsToClear = [];
+
+                // COLOR_BOMB + COLOR_BOMB = Clear entire board
+                if (t1 === COLOR_BOMB && t2 === COLOR_BOMB) {
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            cellsToClear.push({ r, c });
+                        }
+                    }
+                }
+                // COLOR_BOMB + STRIPED = All of that color become striped and explode
+                else if ((t1 === COLOR_BOMB && (t2 === STRIPED_H || t2 === STRIPED_V)) ||
+                    (t2 === COLOR_BOMB && (t1 === STRIPED_H || t1 === STRIPED_V))) {
+                    const targetColor = t1 === COLOR_BOMB ? tile2.color : tile1.color;
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            if (grid[r][c].color === targetColor) {
+                                // Clear row and column for each
+                                for (let i = 0; i < COLS; i++) cellsToClear.push({ r, c: i });
+                                for (let i = 0; i < ROWS; i++) cellsToClear.push({ r: i, c });
+                            }
+                        }
+                    }
+                    cellsToClear.push({ r: r1, c: c1 }, { r: r2, c: c2 });
+                }
+                // COLOR_BOMB + BOMB = All of that color explode as bombs
+                else if ((t1 === COLOR_BOMB && t2 === BOMB) || (t2 === COLOR_BOMB && t1 === BOMB)) {
+                    const targetColor = t1 === COLOR_BOMB ? tile2.color : tile1.color;
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            if (grid[r][c].color === targetColor) {
+                                // 3x3 explosion for each
+                                for (let dr = -1; dr <= 1; dr++) {
+                                    for (let dc = -1; dc <= 1; dc++) {
+                                        cellsToClear.push({ r: r + dr, c: c + dc });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    cellsToClear.push({ r: r1, c: c1 }, { r: r2, c: c2 });
+                }
+                // BOMB + BOMB = 5x5 mega explosion
+                else if (t1 === BOMB && t2 === BOMB) {
+                    const centerR = r1, centerC = c1;
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
+                            cellsToClear.push({ r: centerR + dr, c: centerC + dc });
+                        }
+                    }
+                }
+                // STRIPED + BOMB = 3 rows + 3 columns
+                else if ((t1 === BOMB && (t2 === STRIPED_H || t2 === STRIPED_V)) ||
+                    (t2 === BOMB && (t1 === STRIPED_H || t1 === STRIPED_V))) {
+                    const centerR = r1, centerC = c1;
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let c = 0; c < COLS; c++) cellsToClear.push({ r: centerR + dr, c });
+                    }
+                    for (let dc = -1; dc <= 1; dc++) {
+                        for (let r = 0; r < ROWS; r++) cellsToClear.push({ r, c: centerC + dc });
+                    }
+                }
+                // STRIPED + STRIPED = + cross (row + column)
+                else if ((t1 === STRIPED_H || t1 === STRIPED_V) && (t2 === STRIPED_H || t2 === STRIPED_V)) {
+                    for (let c = 0; c < COLS; c++) cellsToClear.push({ r: r1, c });
+                    for (let r = 0; r < ROWS; r++) cellsToClear.push({ r, c: c1 });
+                }
+
+                clearCells(cellsToClear);
+                render();
+                setTimeout(() => applyGravity(), 200);
+                return;
+            }
+
+            // Single Color Bomb activation
+            if (t1 === COLOR_BOMB || t2 === COLOR_BOMB) {
+                moves--;
+                const otherTile = t1 === COLOR_BOMB ? tile2 : tile1;
+                const targetColor = otherTile.color;
+                const cellsToClear = [];
+
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
                         if (grid[r][c].color === targetColor) {
@@ -750,25 +848,10 @@
                         }
                     }
                 }
-                // Also clear the color bomb itself
-                cellsToClear.push(tile1.type === COLOR_BOMB ? { r: r1, c: c1 } : { r: r2, c: c2 });
+                cellsToClear.push({ r: r1, c: c1 }, { r: r2, c: c2 });
 
-                playSound('special');
                 isAnimating = true;
-
-                // Clear all matching cells
-                cellsToClear.forEach(cell => {
-                    const tile = grid[cell.r][cell.c];
-                    if (tile.color >= 0) {
-                        targetProgress.colors[tile.color]++;
-                        targetProgress.score += 10;
-                    }
-                    tile.color = -1;
-                    tile.type = NORMAL;
-                    score += 10;
-                    playSound('pop');
-                });
-
+                clearCells(cellsToClear);
                 render();
                 setTimeout(() => applyGravity(), 200);
                 return;
