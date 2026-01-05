@@ -343,15 +343,25 @@
         padding: 15px;
     ">
         <!-- TOP: Targets -->
-        <div id="targets-panel" style="
+        <div id="targets-container" style="
             display: flex;
-            justify-content: center;
-            gap: 25px;
-            padding: 15px 30px;
-            background: rgba(0,0,0,0.6);
-            border-radius: 20px;
-            flex-wrap: wrap;
-        "></div>
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 40px 20px;
+            background: linear-gradient(135deg, rgba(50,50,80,0.8) 0%, rgba(30,30,50,0.9) 100%);
+            border-radius: 25px;
+            border: 2px solid rgba(255,215,0,0.3);
+        ">
+            <div
+                style="color:#FFD700;font-size:24px;font-weight:bold;margin-bottom:15px;text-shadow:0 0 15px rgba(255,215,0,0.5);">
+                🎯 TARGETS</div>
+            <div id="targets-panel" style="
+                display: flex;
+                justify-content: center;
+                gap: 25px;
+                flex-wrap: wrap;
+            "></div>
+        </div>
 
         <!-- MIDDLE: Game with side info -->
         <div style="display: flex; align-items: center; gap: 25px;">
