@@ -132,7 +132,7 @@ default {
             
             // Reset timeout on any activity
             if (hasPlayer) {
-                llSetTimerEvent(300.0); // 5 minute safety window
+                llSetTimerEvent(180.0); // 3 minute safety window
             }
             
             if(name != JSON_INVALID && name != "") {
@@ -146,52 +146,39 @@ default {
                 }
                 
                 // Update high scores when game over
-                if (newScore > 0) {
-                    // Search for existing player in list
-                    integer found = -1;
-                    integer i;
-                    integer len = llGetListLength(highScores);
-                    
-                    // Debug before
-                    llOwnerSay("Before update - Scores: " + llList2CSV(highScores));
-                    
-                    for (i = 1; i < len; i += 2) {
-                        if (llList2String(highScores, i) == name) {
-                            found = i;
+                if (newScore >= 0) {
+                    if (newScore > 0) {
+                        // Search for existing player in list
+                        integer found = -1;
+                        integer i;
+                        integer len = llGetListLength(highScores);
+                        
+                        for (i = 1; i < len; i += 2) {
+                            if (llList2String(highScores, i) == name) {
+                                found = i;
+                            }
                         }
-                    }
-                    
-                    if (found != -1) {
-                        // Player exists - check if new score is higher
-                        integer oldScore = llList2Integer(highScores, found - 1);
-                        llOwnerSay("Found " + name + " at index " + (string)found + " with old score " + (string)oldScore);
-                        if (newScore > oldScore) {
-                            highScores = llDeleteSubList(highScores, found - 1, found);
+                        
+                        if (found != -1) {
+                            integer oldScore = llList2Integer(highScores, found - 1);
+                            if (newScore > oldScore) {
+                                highScores = llDeleteSubList(highScores, found - 1, found);
+                                highScores = highScores + [newScore, name];
+                            }
+                        } else {
                             highScores = highScores + [newScore, name];
-                            llOwnerSay("Updated score for " + name + ": " + (string)newScore);
                         }
-                    } else {
-                        // New player
-                        highScores = highScores + [newScore, name];
-                        llOwnerSay("Added new player " + name + ": " + (string)newScore);
+                        
+                        highScores = llListSort(highScores, 2, FALSE);
+                        if(llGetListLength(highScores) > MAX_SCORES * 2) {
+                            highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
+                        }
+                        DisplayHighScores();
+                        SaveScores();
                     }
-                    
-                    // Sort by score descending (stride 2, first element is score)
-                    highScores = llListSort(highScores, 2, FALSE);
-                    
-                    // Limit to MAX_SCORES entries
-                    if(llGetListLength(highScores) > MAX_SCORES * 2) {
-                        highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
-                    }
-                    
-                    // Debug after
-                    llOwnerSay("After update - Scores: " + llList2CSV(highScores));
-                    
-                    DisplayHighScores();
-                    SaveScores();
                     
                     llHTTPResponse(id, 200, "GAMEOVER");
-                    llSleep(3.0);
+                    llSleep(1.0);
                     SetStandby();
                 } else {
                     llHTTPResponse(id, 200, "OK");
@@ -208,9 +195,11 @@ default {
         key toucher = llDetectedKey(0);
         
         if (primName == "reset") {
-            // Only owner can reset while someone is playing
-            if (hasPlayer && toucher != llGetOwner()) {
-                llRegionSayTo(toucher, 0, "⚠️ Game in progress. Only owner can reset.");
+            // Only owner can reset while someone is playing, UNLESS it's been idle (timer running)
+            // We use a trick: if hasPlayer is true but people are stuck, we want them to be able to reset.
+            // Let's allow reset if the toucher is the currentPlayer OR owner OR if the game is idle.
+            if (hasPlayer && toucher != llGetOwner()) { 
+                llRegionSayTo(toucher, 0, "⚠️ Game in progress: " + currentPlayer + ". Only owner can reset.");
             } else {
                 llResetScript();
             }
@@ -241,7 +230,7 @@ default {
                     PRIM_MEDIA_AUTO_SCALE, TRUE,
                     PRIM_MEDIA_AUTO_ZOOM, TRUE
                 ]);
-                llSetTimerEvent(300.0); // 5 minute safety window
+                llSetTimerEvent(180.0); // 3 minute safety window
             }
         }
     }
