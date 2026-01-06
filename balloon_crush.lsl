@@ -64,6 +64,32 @@ DisplayHighScores() {
     if(RESET_PRIM_LINK != -1) llSetLinkPrimitiveParamsFast(RESET_PRIM_LINK, [PRIM_TEXT, text, <0,1,1>, 1.0]);
 }
 
+SaveScores() {
+    // Save highScores to linkset data
+    string data = llList2CSV(highScores);
+    llLinksetDataWrite("highScores", data);
+    
+    // Save playerLevels
+    string levelData = llList2CSV(playerLevels);
+    llLinksetDataWrite("playerLevels", levelData);
+}
+
+LoadScores() {
+    // Load highScores from linkset data
+    string data = llLinksetDataRead("highScores");
+    if (data != "") {
+        highScores = llCSV2List(data);
+    }
+    
+    // Load playerLevels
+    string levelData = llLinksetDataRead("playerLevels");
+    if (levelData != "") {
+        playerLevels = llCSV2List(levelData);
+    }
+    
+    DisplayHighScores();
+}
+
 SetStandby() {
     hasPlayer = FALSE;
     currentPlayer = "";
@@ -76,6 +102,7 @@ SetStandby() {
 default {
     state_entry() {
         FindPrims();
+        LoadScores();
         llRequestSecureURL();
         SetStandby();
         llOwnerSay("Balloon Crush Ready.");
@@ -108,6 +135,7 @@ default {
                     integer currentLevel = GetPlayerLevel(name);
                     if (newLevel > currentLevel) {
                         SetPlayerLevel(name, newLevel);
+                        SaveScores();
                     }
                 }
                 
@@ -154,6 +182,7 @@ default {
                     llOwnerSay("After update - Scores: " + llList2CSV(highScores));
                     
                     DisplayHighScores();
+                    SaveScores();
                     
                     llHTTPResponse(id, 200, "GAMEOVER");
                     llSleep(3.0);
