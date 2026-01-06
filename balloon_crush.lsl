@@ -93,6 +93,7 @@ LoadScores() {
 SetStandby() {
     hasPlayer = FALSE;
     currentPlayer = "";
+    llSetTimerEvent(0.0);
     if (SCREEN_LINK >= 0) {
         llClearLinkMedia(SCREEN_LINK, SCREEN_FACE);
         llSetLinkPrimitiveParamsFast(SCREEN_LINK, [PRIM_TEXTURE, SCREEN_FACE, STANDBY_TEXTURE, <1,1,0>, <0,0,0>, 0.0]);
@@ -128,6 +129,11 @@ default {
             string name = llJsonGetValue(jsonData, ["name"]);
             integer newScore = (integer)llJsonGetValue(jsonData, ["score"]);
             integer newLevel = (integer)llJsonGetValue(jsonData, ["level"]);
+            
+            // Reset timeout on any activity
+            if (hasPlayer) {
+                llSetTimerEvent(300.0); // 5 minute safety window
+            }
             
             if(name != JSON_INVALID && name != "") {
                 // Update player level
@@ -217,25 +223,33 @@ default {
                 string user = llDetectedName(0);
                 hasPlayer = TRUE;
                 currentPlayer = user;
-            
-            integer playerLevel = GetPlayerLevel(user);
-            
-            string url = GAME_BASE_URL + "?player=" + llEscapeURL(user) 
-                + "&sl_url=" + llEscapeURL(my_url) 
-                + "&level=" + (string)playerLevel
-                + "&v=" + (string)llGetUnixTime();
-            
-            llSetLinkMedia(SCREEN_LINK, SCREEN_FACE, [
-                PRIM_MEDIA_CURRENT_URL, url,
-                PRIM_MEDIA_HOME_URL, url,
-                PRIM_MEDIA_AUTO_PLAY, TRUE,
-                PRIM_MEDIA_FIRST_CLICK_INTERACT, FALSE,
-                PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE,
-                PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_ANYONE,
-                PRIM_MEDIA_AUTO_SCALE, TRUE,
-                PRIM_MEDIA_AUTO_ZOOM, TRUE
-            ]);
+                
+                integer playerLevel = GetPlayerLevel(user);
+                
+                string url = GAME_BASE_URL + "?player=" + llEscapeURL(user) 
+                    + "&sl_url=" + llEscapeURL(my_url) 
+                    + "&level=" + (string)playerLevel
+                    + "&v=" + (string)llGetUnixTime();
+                
+                llSetLinkMedia(SCREEN_LINK, SCREEN_FACE, [
+                    PRIM_MEDIA_CURRENT_URL, url,
+                    PRIM_MEDIA_HOME_URL, url,
+                    PRIM_MEDIA_AUTO_PLAY, TRUE,
+                    PRIM_MEDIA_FIRST_CLICK_INTERACT, FALSE,
+                    PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE,
+                    PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_ANYONE,
+                    PRIM_MEDIA_AUTO_SCALE, TRUE,
+                    PRIM_MEDIA_AUTO_ZOOM, TRUE
+                ]);
+                llSetTimerEvent(300.0); // 5 minute safety window
             }
+        }
+    }
+    
+    timer() {
+        if (hasPlayer) {
+            llOwnerSay("Safety timeout reached. Resetting screen.");
+            SetStandby();
         }
     }
     
