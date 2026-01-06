@@ -227,8 +227,10 @@ default {
                     PRIM_MEDIA_FIRST_CLICK_INTERACT, FALSE,
                     PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE,
                     PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_ANYONE,
-                    PRIM_MEDIA_AUTO_SCALE, TRUE,
-                    PRIM_MEDIA_AUTO_ZOOM, TRUE
+                    PRIM_MEDIA_AUTO_SCALE, FALSE,
+                    PRIM_MEDIA_AUTO_ZOOM, FALSE,
+                    PRIM_MEDIA_WIDTH_PIXELS, 1024,
+                    PRIM_MEDIA_HEIGHT_PIXELS, 1024
                 ]);
                 llSetTimerEvent(180.0); // 3 minute safety window
             }
