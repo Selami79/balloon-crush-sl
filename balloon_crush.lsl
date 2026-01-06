@@ -101,6 +101,11 @@ default {
             integer newScore = (integer)llJsonGetValue(jsonData, ["score"]);
             integer newLevel = (integer)llJsonGetValue(jsonData, ["level"]);
             
+            // Reset timeout on any activity
+            if (hasPlayer) {
+                llSetTimerEvent(60.0);
+            }
+            
             if(name != JSON_INVALID && name != "") {
                 // Update player level
                 if (newLevel > 0) {
