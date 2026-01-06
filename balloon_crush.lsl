@@ -2,7 +2,7 @@
 // Level progress and high scores saved in LSL
 
 string GAME_BASE_URL = "https://selami79.github.io/balloon-crush-sl/"; 
-string STANDBY_TEXTURE = "d570bdfe-69a5-e500-bf13-31e36c093634";
+string STANDBY_TEXTURE = "4748cdb8-5987-084f-709b-668ee84b06e0";
 string my_url = "";
 integer SCREEN_LINK = -2; 
 integer RESET_PRIM_LINK = -1; 
@@ -111,9 +111,14 @@ default {
                 
                 // Update high scores when game over
                 if (newScore > 0) {
+                    // Search for existing player in list
                     integer found = -1;
                     integer i;
                     integer len = llGetListLength(highScores);
+                    
+                    // Debug before
+                    llOwnerSay("Before update - Scores: " + llList2CSV(highScores));
+                    
                     for (i = 1; i < len; i += 2) {
                         if (llList2String(highScores, i) == name) {
                             found = i;
@@ -121,19 +126,31 @@ default {
                     }
                     
                     if (found != -1) {
+                        // Player exists - check if new score is higher
                         integer oldScore = llList2Integer(highScores, found - 1);
+                        llOwnerSay("Found " + name + " at index " + (string)found + " with old score " + (string)oldScore);
                         if (newScore > oldScore) {
                             highScores = llDeleteSubList(highScores, found - 1, found);
-                            highScores += [newScore, name];
+                            highScores = highScores + [newScore, name];
+                            llOwnerSay("Updated score for " + name + ": " + (string)newScore);
                         }
                     } else {
-                        highScores += [newScore, name];
+                        // New player
+                        highScores = highScores + [newScore, name];
+                        llOwnerSay("Added new player " + name + ": " + (string)newScore);
                     }
                     
+                    // Sort by score descending (stride 2, first element is score)
                     highScores = llListSort(highScores, 2, FALSE);
+                    
+                    // Limit to MAX_SCORES entries
                     if(llGetListLength(highScores) > MAX_SCORES * 2) {
                         highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
                     }
+                    
+                    // Debug after
+                    llOwnerSay("After update - Scores: " + llList2CSV(highScores));
+                    
                     DisplayHighScores();
                     
                     llHTTPResponse(id, 200, "GAMEOVER");
