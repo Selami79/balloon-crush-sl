@@ -8,6 +8,7 @@ integer SCREEN_LINK = -2;
 integer RESET_PRIM_LINK = -1; 
 integer SCREEN_FACE = 0;
 integer hasPlayer = FALSE;
+string currentPlayer = "";
 integer MAX_SCORES = 10;
 list highScores = []; 
 list playerLevels = [];
@@ -65,6 +66,7 @@ DisplayHighScores() {
 
 SetStandby() {
     hasPlayer = FALSE;
+    currentPlayer = "";
     if (SCREEN_LINK >= 0) {
         llClearLinkMedia(SCREEN_LINK, SCREEN_FACE);
         llSetLinkPrimitiveParamsFast(SCREEN_LINK, [PRIM_TEXTURE, SCREEN_FACE, STANDBY_TEXTURE, <1,1,0>, <0,0,0>, 0.0]);
@@ -169,9 +171,14 @@ default {
         integer link = llDetectedLinkNumber(0);
         string name = llToLower(llGetLinkName(link));
         if (name == "reset") llResetScript();
-        else if (link == SCREEN_LINK && !hasPlayer) {
-            string user = llDetectedName(0);
-            hasPlayer = TRUE;
+        else if (link == SCREEN_LINK) {
+            if (hasPlayer) {
+                // Game is busy - warn the user
+                llRegionSayTo(llDetectedKey(0), 0, "⚠️ " + currentPlayer + " is currently playing. Please wait.");
+            } else {
+                string user = llDetectedName(0);
+                hasPlayer = TRUE;
+                currentPlayer = user;
             
             integer playerLevel = GetPlayerLevel(user);
             
@@ -190,6 +197,7 @@ default {
                 PRIM_MEDIA_AUTO_SCALE, TRUE,
                 PRIM_MEDIA_AUTO_ZOOM, TRUE
             ]);
+            }
         }
     }
     
