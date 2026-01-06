@@ -65,6 +65,7 @@ DisplayHighScores() {
 
 SetStandby() {
     hasPlayer = FALSE;
+    llSetTimerEvent(0.0);
     if (SCREEN_LINK >= 0) {
         llClearLinkMedia(SCREEN_LINK, SCREEN_FACE);
         llSetLinkPrimitiveParamsFast(SCREEN_LINK, [PRIM_TEXTURE, SCREEN_FACE, STANDBY_TEXTURE, <1,1,0>, <0,0,0>, 0.0]);
@@ -173,6 +174,13 @@ default {
                 PRIM_MEDIA_AUTO_SCALE, TRUE,
                 PRIM_MEDIA_AUTO_ZOOM, TRUE
             ]);
+            llSetTimerEvent(60.0);
+        }
+    }
+    
+    timer() {
+        if (hasPlayer) {
+            SetStandby();
         }
     }
     
