@@ -346,7 +346,7 @@
         <div id="score-bar" style="
             display: flex;
             justify-content: center;
-            gap: 50px;
+            gap: 40px;
             padding: 12px 40px;
             background: linear-gradient(135deg, rgba(50,50,80,0.8) 0%, rgba(30,30,50,0.9) 100%);
             border-radius: 25px;
@@ -366,6 +366,11 @@
                 <span style="color:#2ecc71;font-size:16px;">⭐ LEVEL</span>
                 <span id="level"
                     style="color:#2ecc71;font-size:28px;font-weight:bold;text-shadow:0 0 10px rgba(46,204,113,0.5);">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="color:#e74c3c;font-size:16px;">⏱️ TIME</span>
+                <span id="timer"
+                    style="color:#e74c3c;font-size:28px;font-weight:bold;text-shadow:0 0 10px rgba(231,76,60,0.5);">60</span>
             </div>
         </div>
 
@@ -432,6 +437,58 @@
         const COLS = 8, ROWS = 8, COLORS = 6;
         const NORMAL = 0, STRIPED_H = 1, STRIPED_V = 2, BOMB = 3, COLOR_BOMB = 4;
         const OBS_NONE = 0, OBS_ICE = 1, OBS_WALL = 2;
+
+        // ===== MOVE TIMER =====
+        const MOVE_TIMEOUT = 60;
+        let moveTimer = MOVE_TIMEOUT;
+        let timerInterval = null;
+
+        function startMoveTimer() {
+            moveTimer = MOVE_TIMEOUT;
+            updateTimerDisplay();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(function () {
+                moveTimer--;
+                updateTimerDisplay();
+                if (moveTimer <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    // Time's up - game over
+                    if (window.submitScoreToSL) {
+                        window.submitScoreToSL(score, level);
+                    }
+                    showOverlay('gameover', { score: score, level: level });
+                    setTimeout(function () {
+                        score = 0;
+                        level = 1;
+                        init();
+                    }, 3500);
+                }
+            }, 1000);
+        }
+
+        function resetMoveTimer() {
+            moveTimer = MOVE_TIMEOUT;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const timerEl = document.getElementById('timer');
+            if (timerEl) {
+                timerEl.textContent = moveTimer;
+                // Change color based on time
+                if (moveTimer <= 10) {
+                    timerEl.style.color = '#e74c3c';
+                    timerEl.style.animation = 'pulse 0.5s ease-in-out infinite';
+                } else if (moveTimer <= 20) {
+                    timerEl.style.color = '#f39c12';
+                    timerEl.style.animation = 'none';
+                } else {
+                    timerEl.style.color = '#2ecc71';
+                    timerEl.style.animation = 'none';
+                }
+            }
+        }
 
         // ===== AUDIO =====
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -580,6 +637,7 @@
             createGrid();
             addObstacles(config.iceCount || 0, config.wallCount || 0);
             removeInitialMatches();
+            startMoveTimer();
             render();
         }
 
@@ -777,6 +835,7 @@
             // Special + Special combinations
             if (isSpecial1 && isSpecial2) {
                 moves--;
+                resetMoveTimer();
                 isAnimating = true;
                 const cellsToClear = [];
 
@@ -855,6 +914,7 @@
             // Single Color Bomb activation
             if (t1 === COLOR_BOMB || t2 === COLOR_BOMB) {
                 moves--;
+                resetMoveTimer();
                 const otherTile = t1 === COLOR_BOMB ? tile2 : tile1;
                 const targetColor = otherTile.color;
                 const cellsToClear = [];
@@ -880,6 +940,7 @@
             const matches = findMatches();
             if (matches.length > 0) {
                 moves--;
+                resetMoveTimer();
                 comboCount = 0;
                 processMatches(matches, { r: r2, c: c2 });
             } else {

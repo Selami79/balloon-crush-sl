@@ -65,7 +65,6 @@ DisplayHighScores() {
 
 SetStandby() {
     hasPlayer = FALSE;
-    llSetTimerEvent(0.0);
     if (SCREEN_LINK >= 0) {
         llClearLinkMedia(SCREEN_LINK, SCREEN_FACE);
         llSetLinkPrimitiveParamsFast(SCREEN_LINK, [PRIM_TEXTURE, SCREEN_FACE, STANDBY_TEXTURE, <1,1,0>, <0,0,0>, 0.0]);
@@ -100,11 +99,6 @@ default {
             string name = llJsonGetValue(jsonData, ["name"]);
             integer newScore = (integer)llJsonGetValue(jsonData, ["score"]);
             integer newLevel = (integer)llJsonGetValue(jsonData, ["level"]);
-            
-            // Reset timeout on any activity
-            if (hasPlayer) {
-                llSetTimerEvent(60.0);
-            }
             
             if(name != JSON_INVALID && name != "") {
                 // Update player level
@@ -179,13 +173,6 @@ default {
                 PRIM_MEDIA_AUTO_SCALE, TRUE,
                 PRIM_MEDIA_AUTO_ZOOM, TRUE
             ]);
-            llSetTimerEvent(60.0);
-        }
-    }
-    
-    timer() {
-        if (hasPlayer) {
-            SetStandby();
         }
     }
     
