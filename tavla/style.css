@@ -1,0 +1,760 @@
+/* ========================================
+   TAVLA (BACKGAMMON) - Premium Dark Theme
+   ======================================== */
+
+:root {
+    /* Color Palette */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-tertiary: #1a1a28;
+
+    --board-dark: #2d1810;
+    --board-light: #8b4513;
+    --board-border: #4a2c17;
+    --board-felt: #0d4a2a;
+
+    --triangle-dark: #1a0f0a;
+    --triangle-light: #c9a66b;
+
+    --checker-white: #f5f5f5;
+    --checker-white-border: #d4af37;
+    --checker-white-shadow: rgba(212, 175, 55, 0.4);
+
+    --checker-black: #1a1a1a;
+    --checker-black-border: #8b0000;
+    --checker-black-shadow: rgba(139, 0, 0, 0.4);
+
+    --accent-gold: #d4af37;
+    --accent-red: #dc3545;
+    --accent-green: #28a745;
+    --accent-blue: #4dabf7;
+
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666666;
+
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: rgba(0, 0, 0, 0.3);
+
+    /* Spacing */
+    --point-width: 50px;
+    --checker-size: 40px;
+    --bar-width: 50px;
+    --home-width: 60px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: var(--text-primary);
+}
+
+/* ========================================
+   GAME CONTAINER
+   ======================================== */
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 900px;
+    width: 100%;
+    position: relative;
+}
+
+/* ========================================
+   3D DICE BOX CONTAINER
+   ======================================== */
+
+#dice-box {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+#dice-box.active {
+    pointer-events: auto;
+}
+
+/* ========================================
+   HEADER - Player Info & Dice
+   ======================================== */
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px var(--glass-shadow);
+    z-index: 10;
+}
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.player-info.player-black {
+    flex-direction: row-reverse;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 32px;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    border: 2px solid var(--glass-border);
+}
+
+.details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.player-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.player-score {
+    font-size: 0.85rem;
+    color: var(--accent-gold);
+}
+
+.turn-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+.turn-indicator.active {
+    background: var(--accent-green);
+    box-shadow: 0 0 10px var(--accent-green), 0 0 20px var(--accent-green);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+}
+
+/* Dice Area */
+.dice-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.dice-result {
+    display: flex;
+    gap: 10px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    min-height: 30px;
+}
+
+.dice-value {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(145deg, #ffffff, #e6e6e6);
+    border-radius: 8px;
+    color: #1a1a1a;
+    font-size: 1.2rem;
+    font-weight: 700;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    animation: diceAppear 0.3s ease-out;
+}
+
+.dice-value.used {
+    opacity: 0.4;
+    transform: scale(0.9);
+}
+
+@keyframes diceAppear {
+    from {
+        transform: scale(0) rotateZ(180deg);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) rotateZ(0);
+        opacity: 1;
+    }
+}
+
+.roll-btn {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, var(--accent-gold), #b8963a);
+    border: none;
+    border-radius: 12px;
+    color: #1a1a1a;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.roll-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.roll-btn:hover::before {
+    left: 100%;
+}
+
+.roll-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(212, 175, 55, 0.5);
+}
+
+.roll-btn:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+.roll-btn:disabled {
+    background: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.roll-btn:disabled::before {
+    display: none;
+}
+
+/* ========================================
+   GAME BOARD
+   ======================================== */
+
+.board-wrapper {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    z-index: 5;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: auto var(--home-width);
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    background: linear-gradient(145deg, var(--board-dark), var(--board-light));
+    border: 8px solid var(--board-border);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        inset 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.board-half {
+    display: flex;
+    background: var(--board-felt);
+    border-radius: 4px;
+}
+
+.top-half {
+    border-bottom: 3px solid var(--board-border);
+}
+
+.quadrant {
+    display: flex;
+    flex: 1;
+}
+
+.left-quadrant {
+    border-right: none;
+}
+
+.bar {
+    width: var(--bar-width);
+    background: linear-gradient(to bottom, var(--board-dark), var(--board-border));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 5px;
+}
+
+.bar-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    letter-spacing: 2px;
+}
+
+.bar-checkers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+}
+
+/* Points (Triangles) */
+.point {
+    width: var(--point-width);
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+    position: relative;
+}
+
+.point:hover {
+    filter: brightness(1.1);
+}
+
+.point.valid-move {
+    filter: brightness(1.3);
+}
+
+.point.valid-move::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(40, 167, 69, 0.5);
+    border: 2px solid var(--accent-green);
+    animation: validPulse 1s infinite;
+}
+
+@keyframes validPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+}
+
+.bottom-half .point {
+    flex-direction: column-reverse;
+}
+
+/* Point numbers */
+.point-number {
+    position: absolute;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    opacity: 0.7;
+}
+
+.top-half .point-number {
+    bottom: 5px;
+}
+
+.bottom-half .point-number {
+    top: 5px;
+}
+
+.triangle {
+    width: 0;
+    height: 0;
+    border-left: calc(var(--point-width) / 2) solid transparent;
+    border-right: calc(var(--point-width) / 2) solid transparent;
+}
+
+.top-half .triangle {
+    border-top: 160px solid;
+}
+
+.bottom-half .triangle {
+    border-bottom: 160px solid;
+}
+
+.triangle.dark {
+    border-top-color: var(--triangle-dark);
+    border-bottom-color: var(--triangle-dark);
+}
+
+.triangle.light {
+    border-top-color: var(--triangle-light);
+    border-bottom-color: var(--triangle-light);
+}
+
+/* Checkers Container */
+.checkers-container {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: -10px;
+    z-index: 10;
+}
+
+.top-half .checkers-container {
+    top: 5px;
+}
+
+.bottom-half .checkers-container {
+    bottom: 5px;
+    flex-direction: column-reverse;
+}
+
+/* Checkers (Stones) */
+.checker {
+    width: var(--checker-size);
+    height: var(--checker-size);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    margin-top: -10px;
+}
+
+.checker:first-child {
+    margin-top: 0;
+}
+
+.checker.white {
+    background: radial-gradient(circle at 30% 30%, #ffffff, var(--checker-white));
+    border: 3px solid var(--checker-white-border);
+    box-shadow:
+        0 4px 8px var(--checker-white-shadow),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.2),
+        inset 0 3px 6px rgba(255, 255, 255, 0.5);
+}
+
+.checker.black {
+    background: radial-gradient(circle at 30% 30%, #3a3a3a, var(--checker-black));
+    border: 3px solid var(--checker-black-border);
+    box-shadow:
+        0 4px 8px var(--checker-black-shadow),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.5),
+        inset 0 3px 6px rgba(255, 255, 255, 0.1);
+}
+
+.checker:hover {
+    transform: translateY(-3px) scale(1.05);
+    z-index: 100;
+}
+
+.checker.selected {
+    transform: translateY(-8px) scale(1.1);
+    z-index: 100;
+    box-shadow:
+        0 8px 20px rgba(212, 175, 55, 0.6),
+        0 0 0 4px var(--accent-gold);
+    animation: selectedPulse 0.8s infinite alternate;
+}
+
+@keyframes selectedPulse {
+    from {
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.6), 0 0 0 4px var(--accent-gold);
+    }
+
+    to {
+        box-shadow: 0 12px 30px rgba(212, 175, 55, 0.8), 0 0 0 6px var(--accent-gold);
+    }
+}
+
+.checker.moving {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Stacked checker count indicator */
+.checker-count {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--bg-primary);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.checker.black .checker-count {
+    color: var(--text-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Home Areas */
+.home-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: linear-gradient(145deg, var(--board-dark), var(--board-border));
+    border-radius: 0 8px 8px 0;
+    padding: 10px;
+}
+
+.home-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    letter-spacing: 1px;
+}
+
+.home-checkers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.home-checker {
+    width: 45px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+.home-checker.white {
+    background: linear-gradient(to bottom, var(--checker-white), #ddd);
+    border: 1px solid var(--checker-white-border);
+}
+
+.home-checker.black {
+    background: linear-gradient(to bottom, #333, var(--checker-black));
+    border: 1px solid var(--checker-black-border);
+}
+
+/* ========================================
+   GAME STATUS
+   ======================================== */
+
+.game-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 15px 25px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    z-index: 10;
+}
+
+.status-message {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.moves-remaining {
+    display: flex;
+    gap: 8px;
+}
+
+.move-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(145deg, var(--accent-gold), #b8963a);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--bg-primary);
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4);
+    transition: all 0.3s ease;
+}
+
+.move-dot.used {
+    background: var(--text-muted);
+    opacity: 0.4;
+    transform: scale(0.85);
+    box-shadow: none;
+}
+
+/* ========================================
+   GAME CONTROLS
+   ======================================== */
+
+.game-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    z-index: 10;
+}
+
+.control-btn {
+    padding: 12px 24px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.control-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px var(--glass-shadow);
+}
+
+.control-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.control-btn#confirm-btn:not(:disabled) {
+    background: linear-gradient(135deg, var(--accent-green), #1e7e34);
+    border-color: var(--accent-green);
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+    :root {
+        --point-width: 35px;
+        --checker-size: 30px;
+        --bar-width: 35px;
+        --home-width: 45px;
+    }
+
+    .game-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .player-info {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .point {
+        height: 140px;
+    }
+
+    .top-half .triangle {
+        border-top-width: 110px;
+    }
+
+    .bottom-half .triangle {
+        border-bottom-width: 110px;
+    }
+
+    .game-controls {
+        flex-wrap: wrap;
+    }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes checkerDrop {
+    0% {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+
+    60% {
+        transform: translateY(5px);
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.checker.dropping {
+    animation: checkerDrop 0.4s ease-out;
+}
+
+@keyframes highlight {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 20px 10px rgba(212, 175, 55, 0.3);
+    }
+}
+
+.point.highlighted {
+    animation: highlight 1s infinite;
+}
+
+/* Double roll indicator */
+.dice-result.doubles {
+    animation: doublePulse 0.5s ease-in-out;
+}
+
+@keyframes doublePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
