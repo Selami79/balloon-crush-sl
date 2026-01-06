@@ -169,8 +169,17 @@ default {
 
     touch_start(integer n) {
         integer link = llDetectedLinkNumber(0);
-        string name = llToLower(llGetLinkName(link));
-        if (name == "reset") llResetScript();
+        string primName = llToLower(llGetLinkName(link));
+        key toucher = llDetectedKey(0);
+        
+        if (primName == "reset") {
+            // Only owner can reset while someone is playing
+            if (hasPlayer && toucher != llGetOwner()) {
+                llRegionSayTo(toucher, 0, "⚠️ Game in progress. Only owner can reset.");
+            } else {
+                llResetScript();
+            }
+        }
         else if (link == SCREEN_LINK) {
             if (hasPlayer) {
                 // Game is busy - warn the user
