@@ -146,41 +146,41 @@ default {
                 }
                 
                 // Update high scores when game over
-                if (newScore >= 0) {
-                    if (newScore > 0) {
-                        // Search for existing player in list
-                        integer found = -1;
-                        integer i;
-                        integer len = llGetListLength(highScores);
-                        
-                        for (i = 1; i < len; i += 2) {
-                            if (llList2String(highScores, i) == name) {
-                                found = i;
-                            }
+                if (newScore > 0) {
+                    // Search for existing player in list
+                    integer found = -1;
+                    integer i;
+                    integer len = llGetListLength(highScores);
+                    
+                    for (i = 1; i < len; i += 2) {
+                        if (llList2String(highScores, i) == name) {
+                            found = i;
                         }
-                        
-                        if (found != -1) {
-                            integer oldScore = llList2Integer(highScores, found - 1);
-                            if (newScore > oldScore) {
-                                highScores = llDeleteSubList(highScores, found - 1, found);
-                                highScores = highScores + [newScore, name];
-                            }
-                        } else {
+                    }
+                    
+                    if (found != -1) {
+                        integer oldScore = llList2Integer(highScores, found - 1);
+                        if (newScore > oldScore) {
+                            highScores = llDeleteSubList(highScores, found - 1, found);
                             highScores = highScores + [newScore, name];
                         }
-                        
-                        highScores = llListSort(highScores, 2, FALSE);
-                        if(llGetListLength(highScores) > MAX_SCORES * 2) {
-                            highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
-                        }
-                        DisplayHighScores();
-                        SaveScores();
+                    } else {
+                        highScores = highScores + [newScore, name];
                     }
+                    
+                    highScores = llListSort(highScores, 2, FALSE);
+                    if(llGetListLength(highScores) > MAX_SCORES * 2) {
+                        highScores = llList2List(highScores, 0, (MAX_SCORES * 2) - 1);
+                    }
+                    DisplayHighScores();
+                    SaveScores();
                     
                     llHTTPResponse(id, 200, "GAMEOVER");
                     llSleep(1.0);
                     SetStandby();
                 } else {
+                    // For level transitions or normal activity where score is 0,
+                    // keep the media alive and don't reset to standby.
                     llHTTPResponse(id, 200, "OK");
                 }
             } else {
